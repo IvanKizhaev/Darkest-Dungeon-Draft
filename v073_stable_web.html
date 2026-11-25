@@ -2721,6 +2721,7 @@ async function performAbilityAction(ability, animate = true) {
   if (token !== draftToken) return;
   
   // 6. Шаг ВПЕРЁД + рендер нового героя (после затухания)
+  lastAbilityAction = null;
   abilityStep++;
   if (abilityStep >= ABILITY_ORDER.length) abilityPhase = "done";
   render();
