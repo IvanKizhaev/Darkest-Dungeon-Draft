@@ -1,0 +1,3432 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Darkest Dungeon Draft</title>
+<link rel="icon" type="image/ico" href="https://i.ibb.co/0pDF0FqW/ico.jpg">
+<style>
+#bg-decor { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+#bg-decor::before {
+  content: ''; position: absolute; inset: 0;
+  background:
+    url('https://i.ibb.co/ymz6ZXnm/vs-l.png') left center / auto 60% no-repeat,
+    url('https://i.ibb.co/dwp0bjFm/vs-r.png') right center / auto 60% no-repeat;
+  opacity: 0.1;
+  animation: bgFadeInSides 2s ease-out forwards;
+}
+  body { background-color: #000000; color: #e0d5c0; font-family: Georgia, serif; margin: 0; padding: 20px; min-height: 100vh; overflow-x: hidden; }
+  body::before {
+    content: ''; position: fixed; bottom: 0; left: 0; width: 100%; height: 55vh;
+    background: url('https://i.ibb.co/RTgjsZLf/font4.jpg') center bottom / cover no-repeat;
+    z-index: 0; opacity: 0.9; pointer-events: none;
+    mask-image: linear-gradient(to top, rgba(0,0,0,1) 10%, rgba(0,0,0,0) 100%);
+    -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,1) 10%, rgba(0,0,0,0) 100%);
+    animation: bgFadeInBottom 1.5s ease-out forwards; 
+  }
+  .container { max-width: 1100px; margin: 0 auto; position: relative; z-index: 1; }
+  .site-header { text-align: center; margin-bottom: 25px; }
+  .header-banner { display: block; margin: 0 auto 15px; max-width: 100%; max-height: 320px; height: auto; animation: bannerFadeIn 1.2s ease-out forwards; }
+  h1 { text-align: center; color: #d4af37; text-shadow: 0 0 15px #000; letter-spacing: 2px; }
+  .setup-screen {
+  position: relative;
+  max-width: 600px;
+  margin: 20px auto 60px auto;
+  padding: 50px 30px;
+  background: rgba(0, 0, 0, 0.4);
+  border: none;
+  border-radius: 4px;
+  text-align: center;
+  isolation: isolate;
+}
+.setup-screen::before,
+.setup-screen::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: auto;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  pointer-events: none;
+  z-index: 1;
+}
+.setup-screen::before {
+  top: 0;
+  background-image: url('https://i.ibb.co/LXcBYGsP/menu-font-up.png');
+  aspect-ratio: 600 / 60;
+  transform: translateY(-0%);
+}
+.setup-screen::after {
+  bottom: 0;
+  background-image: url('https://i.ibb.co/7Nz7Jzt3/menu-font-down.png');
+  aspect-ratio: 600 / 60;
+  transform: translateY(0%);
+}
+
+/* Поднимаем ячейку героя на передний план при наведении */
+  #p1-ability-bans .hero-cell:hover, 
+  #p2-ability-bans .hero-cell:hover {
+    position: relative;
+    z-index: 100; /* Значение больше, чем у любых соседних элементов */
+  }
+
+  /* Поднимаем сам тег способности на передний план при наведении */
+  #p1-ability-bans .hero-ban-tag:hover, 
+  #p2-ability-bans .hero-ban-tag:hover {
+    z-index: 100;
+  }
+
+/* Оверлей на иконках забаненных способностей */
+#p1-ability-bans .hero-ban-tag:not(.picked-tag)::after,
+#p2-ability-bans .hero-ban-tag:not(.picked-tag)::after {
+  content: '';
+  position: absolute;
+  top: 0;                     /* выравниваем по верхнему краю иконки */
+  left: 50%;
+  transform: translateX(-50%);
+  width: 48px;                /* совпадает с размером .ban-ability-icon */
+  height: 48px;
+  background: url('https://i.ibb.co/RkqS6cP6/ban-ability.png') center / contain no-repeat;
+  opacity: 0.5;
+  pointer-events: none;       /* не мешает наведению и кликам */
+  z-index: 1;                 /* поверх иконки, но под тултипом (у тултипа z-index: 10) */
+}
+
+  .setup-screen h2 { color: #d4af37; margin-top: 0; }
+  .setup-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0; }
+  .setup-inputs label { display: block; color: #d4af37; margin-bottom: 6px; font-size: 0.9em; text-align: left; }
+  .setup-inputs input { width: 100%; padding: 10px; background: #1a1410; color: #e0d5c0; border: 1px solid #8b7355; border-radius: 4px; font-family: Georgia, serif; font-size: 1em; box-sizing: border-box; }
+  .setup-inputs input:focus { outline: none; border-color: #d4af37; }
+  .coin-display { perspective: 1000px; display: flex; justify-content: center; margin: 20px 0; min-height: 0; }
+  .coin {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  border: 3px solid #d4af37;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 30px rgba(212, 175, 55, 0.6);
+  overflow: hidden;
+  background: #1a1410;
+}
+.coin img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  display: block;
+}
+
+/* ====== АНИМАЦИИ ПОЯВЛЕНИЯ ФОНОВЫХ ЭЛЕМЕНТОВ ====== */
+
+/* Анимация для нижнего фона (font4) */
+@keyframes bgFadeInBottom {
+  from { opacity: 0; }
+  to { opacity: 0.9; } /* Возвращаем изначальную прозрачность */
+}
+
+/* Анимация для боковых декораций (vs_l, vs_r) */
+@keyframes bgFadeInSides {
+  from { opacity: 0; }
+  to { opacity: 0.1; } /* Возвращаем изначальную прозрачность */
+}
+
+/* Анимация для шапки (font1) */
+@keyframes bannerFadeIn {
+  from { opacity: 0; transform: translateY(-15px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+  @keyframes coin-flip { 0% { transform: rotateY(0deg) scale(1); } 25% { transform: rotateY(450deg) scale(1.15); } 50% { transform: rotateY(900deg) scale(1.2); } 75% { transform: rotateY(1350deg) scale(1.15); } 100% { transform: rotateY(1800deg) scale(1); } }
+  .coin.flipping { animation: coin-flip 1.5s ease-out; }
+  .coin-result { min-height: 30px; margin: 15px 0; font-size: 1.1em; color: #d4af37; }
+  .coin-result strong { font-size: 1.2em; }
+  .status { text-align: center; font-size: 1.3em; margin: 15px 0; padding: 12px; border: 1px solid #d4af37; border-radius: 4px; transition: background 0.3s; background-color: rgba(26, 20, 16, 0.75); }
+  .status.p1 { background: rgba(60, 100, 180, 0.55); }
+  .status.p2 { background: rgba(180, 60, 60, 0.55); }
+  .status.done { background: rgba(212, 175, 55, 0.35); color: #d4af37; }
+  .heroes { display: flex; gap: 6px; margin: 20px 0; }
+  .hero { flex: 1 1 0; min-width: 0; display: flex; align-items: center; justify-content: center; padding: 4px; border: 1px solid #8b7355; background: #2a2018; border-radius: 3px; cursor: pointer; transition: all 0.15s; user-select: none; }
+  .hero:hover:not(.disabled) { background: #3a2f25; border-color: #d4af37; transform: translateY(-2px); }
+  .hero.banned { background: #4a1010; opacity: 0.6; }
+  .hero.picked-p1 { background: #1a3060; border-color: #5b8bd9; }
+  .hero.picked-p2 { background: #601a1a; border-color: #d95b5b; }
+  .hero.disabled { cursor: not-allowed; }
+  .hero-icon { width: 100%; max-width: 40px; height: auto; aspect-ratio: 1 / 1; object-fit: cover; border-radius: 3px; border: 1px solid #5a4a3a; background-color: #1a1410; transition: border-color 0.15s, filter 0.15s; }
+  .hero:hover:not(.disabled) .hero-icon { border-color: #d4af37; }
+  .hero.banned .hero-icon, .hero.disabled .hero-icon { filter: grayscale(1) brightness(0.6); opacity: 0.7; }
+  .hero-icon.placeholder { display: flex; align-items: center; justify-content: center; width: 100%; max-width: 40px; aspect-ratio: 1 / 1; font-size: 0.65em; color: #8b7355; background: #1a1410; border: 1px dashed #5a4a3a; }
+  .players { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
+  .player-col { display: flex; flex-direction: column; gap: 12px; }
+  .player-col h2 { margin: 0; padding: 0 4px; }
+  .player-col.p1 h2 { color: #7ba4e8; }
+  .player-col.p2 h2 { color: #e87b7b; }
+  .player strong { color: #d4af37; }
+  .player-window { padding: 12px 15px; border: 1px solid; border-radius: 5px; }
+  .player-col.p1 .player-window { border-color: #5b8bd9; }
+  .player-col.p2 .player-window { border-color: #d95b5b; }
+    /* Новый фон для блоков пиков */
+  .player-col.p1 .picks-window, .player-col.p2 .picks-window {
+    position: relative;
+    background: url('https://i.ibb.co/d01dkxFx/arena-font.png') center bottom / cover no-repeat;
+    isolation: isolate; /* Чтобы затемнение работало корректно */
+    overflow: hidden;
+  }
+
+  /* Затемнение для читаемости текста поверх нового фона */
+  .player-col.p1 .picks-window::before, 
+  .player-col.p2 .picks-window::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  /* Настройка контейнеров пиков (выравнивание как в банах) */
+  #p1-picks, #p2-picks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    align-items: flex-end;
+    min-height: auto; /* Высота под больших персонажей */
+  }
+
+  #p1-picks {
+    justify-content: flex-end; /* Вправо */
+    padding-right: 50px;
+  }
+
+  #p2-picks {
+    justify-content: flex-start; /* Влево */
+    padding-left: 50px;
+  }
+
+  /* Убираем фиксированную ширину ячеек */
+  #p1-picks .hero-cell, #p2-picks .hero-cell {
+    width: auto;
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0;
+  }
+
+  /* Управление масштабом персонажей в пиках (заменили zoom на height) */
+  #p1-picks .hero-cell .hero-gif, #p2-picks .hero-cell .hero-gif {
+    width: auto;
+    height: auto;
+    max-height: none;
+    max-width: none;
+    zoom: 0.45; /* Тот же масштаб, что и в банах */
+    transform-origin: bottom center;
+  }
+
+  /* Зеркальное отражение для второго игрока */
+  #p2-picks .hero-gif {
+    transform: scaleX(-1);
+  }
+
+  /* ====== НОВЫЙ БЛОК СПОСОБНОСТЕЙ ====== */
+  .unified-abilities-block {
+    position: relative;
+    background: url('https://i.ibb.co/fzxWVm63/ability-font.png') center top / cover no-repeat;
+    border: 2px solid #8b7355;
+    border-radius: 5px;
+    margin: 25px 0;
+    padding: 15px 20px;
+    box-shadow: inset 0 0 60px rgba(0,0,0,0.85), 0 0 15px rgba(0,0,0,0.9);
+    isolation: isolate;
+  }
+
+  /* Затемнение фона */
+  .unified-abilities-block::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: -1;
+    border-radius: 3px;
+    pointer-events: none;
+  }
+
+  .unified-abilities-header {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    text-align: center;
+    font-size: 1.6em;
+    font-weight: bold;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid rgba(139, 115, 85, 0.6);
+    text-shadow: 0 0 10px #000, 0 0 5px #000;
+  }
+  
+  .unified-abilities-header .p1-name { color: #7ba4e8; text-shadow: 0 0 8px rgba(123,164,232,0.4); }
+  .unified-abilities-header .ability-title { color: #d4af37; }
+  .unified-abilities-header .p2-name { color: #e87b7b; text-shadow: 0 0 8px rgba(232,123,123,0.4); }
+  
+  .unified-abilities-body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    min-height: 360px;
+  }
+
+ /* Левая колонка (Игрок 1) */
+  #p1-ability-bans {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px 10px;
+    justify-items: center;
+    align-content: start;
+    padding: 15px 20px;
+    border-right: 2px solid rgba(139, 115, 85, 0.6);
+    min-height: 100px;
+  }
+
+  /* Правая колонка (Игрок 2) */
+  #p2-ability-bans {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px 10px;
+    justify-items: center;
+    align-content: start;
+    padding: 15px 20px;
+    min-height: 100px;
+  }
+
+ /* Ячейка с героем */
+  #p1-ability-bans .hero-cell, #p2-ability-bans .hero-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    gap: 5px;
+    height: 100%; /* Растягиваем ячейку на всю высоту */
+  }
+
+ /* Контейнер для способностей */
+  #p1-ability-bans .hero-abilities-container, #p2-ability-bans .hero-abilities-container {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+    background: rgba(0, 0, 0, 0.35);
+    padding: 6px 4px;
+    border-radius: 4px;
+    margin-top: 0;
+  }
+
+  /* Иконка героя над способностями */
+  #p1-ability-bans .hero-cell .hero-icon, #p2-ability-bans .hero-cell .hero-icon {
+    width: 50px;
+    height: 50px;
+    max-width: 50px;
+    border-radius: 4px;
+    border: 1px solid #5a4a3a;
+    background: #1a1410;
+  }
+
+ /* Контейнер для способностей одного героя */
+  #p1-ability-bans .hero-abilities-container, #p2-ability-bans .hero-abilities-container {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+    background: rgba(0, 0, 0, 0.35);
+    padding: 6px 4px;
+    border-radius: 4px;
+    margin-top: 0;
+  }
+
+#p1-ability-bans .hero-ability-row, #p2-ability-bans .hero-ability-row {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: flex-start; /* Иконки прижимаются к верху */
+    gap: 8px;
+    width: 100%;
+    height: 95px; /* ФИКСИРОВАННАЯ ВЫСОТА. Все ряды будут ровно 95px */
+  }
+
+  #p1-ability-bans .hero-ability-row:empty, #p2-ability-bans .hero-ability-row:empty {
+    display: none;
+  }
+
+/* Отдельная способность (Иконка сверху, текст снизу) */
+  #p1-ability-bans .hero-ban-tag, #p2-ability-bans .hero-ban-tag {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 4px;
+    width: 85px; /* Чуть шире, чтобы текст реже переносился */
+    text-align: center;
+    position: relative;
+    cursor: help;
+    font-size: 1em;
+    color: #d95b5b;
+    line-height: 1.2;
+    word-break: break-word; /* Принудительный перенос длинных слов */
+  }
+
+#p1-ability-bans .hero-ban-tag.picked-tag, #p2-ability-bans .hero-ban-tag.picked-tag {
+    color: #2ecc71; /* зелёный */
+  }
+
+  /* Иконка самой способности */
+  #p1-ability-bans .ban-ability-icon, #p2-ability-bans .ban-ability-icon {
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+    border-radius: 3px;
+    background: #1a1410;
+  }
+
+  /* Текст названия способности */
+  #p1-ability-bans .hero-ban-tag > span, #p2-ability-bans .hero-ban-tag > span {
+    text-decoration: none;
+    white-space: normal;
+    word-break: break-word;
+    font-size: 0.85em;
+    min-width: 0;
+  }
+
+.player-col.p2 .hero-gif {
+  transform: scaleX(-1);
+}
+
+  /* ====== НОВЫЙ БЛОК БАНОВ ====== */
+  .unified-bans-block {
+    position: relative;
+    background: url('https://i.ibb.co/23rTZ5Dr/ban-font.png') center bottom / cover no-repeat;
+    border: 2px solid #8b7355;
+    border-radius: 5px;
+    margin: 25px 0;
+    padding: 15px 20px;
+    box-shadow: inset 0 0 60px rgba(0,0,0,0.85), 0 0 15px rgba(0,0,0,0.9);
+    isolation: isolate;
+  }
+
+  /* Затемнение фона (под контентом) */
+  .unified-bans-block::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: -1;
+    border-radius: 3px;
+    pointer-events: none;
+  }
+
+  /* Костёр поверх персонажей, по центру снизу */
+  .unified-bans-block::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 406.8px;
+    height: 100.8px;
+    background: url('https://i.ibb.co/5XDckjWv/campfire.png') center bottom / contain no-repeat;
+    z-index: 10;
+    pointer-events: none;
+  }
+
+  .unified-bans-header {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    text-align: center;
+    font-size: 1.6em;
+    font-weight: bold;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid rgba(139, 115, 85, 0.6);
+    text-shadow: 0 0 10px #000, 0 0 5px #000;
+  }
+  
+  .unified-bans-header .p1-name { color: #7ba4e8; text-shadow: 0 0 8px rgba(123,164,232,0.4); }
+  .unified-bans-header .ban-title { color: #d4af37; }
+  .unified-bans-header .p2-name { color: #e87b7b; text-shadow: 0 0 8px rgba(232,123,123,0.4); }
+  
+  .unified-bans-body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+  }
+
+  /* Игрок 1 (слева) - выравнивание по правому краю с отступом 50px */
+  #p1-bans {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    justify-content: flex-end;
+    padding-right: 50px;
+    align-items: flex-end;
+    min-height: 160px;
+  }
+
+  /* Игрок 2 (справа) - выравнивание по левому краю с отступом 50px */
+  #p2-bans {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    justify-content: flex-start;
+    padding-left: 50px;
+    align-items: flex-end;
+    min-height: 220px;
+  }
+
+ /* Убираем жесткую ширину ячейки, задаем фиксированную высоту */
+  #p1-bans .hero-cell, #p2-bans .hero-cell {
+    width: auto;
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0;
+  }
+    
+  /* ГИФКИ: заменили zoom на фиксированную высоту */
+  #p1-bans .hero-cell .hero-gif, #p2-bans .hero-cell .hero-gif {
+    width: auto;
+    height: auto;
+    max-height: none;
+    max-width: none;
+    zoom: 0.25; /* Ваш масштаб */
+    transform-origin: bottom center;
+  }
+
+  /* Зеркальное отражение для второго игрока */
+  #p2-bans .hero-gif {
+    transform: scaleX(-1);
+  }
+
+  /* ====== НОВЫЙ БЛОК ПИКОВ ====== */
+  .unified-picks-block {
+    position: relative;
+    background: url('https://i.ibb.co/d01dkxFx/arena-font.png') center bottom / cover no-repeat;
+    border: 2px solid #8b7355;
+    border-radius: 5px;
+    margin: 25px 0;
+    padding: 15px 20px;
+    box-shadow: inset 0 0 60px rgba(0,0,0,0.85), 0 0 15px rgba(0,0,0,0.9);
+    isolation: isolate;
+  }
+
+  /* Затемнение фона */
+  .unified-picks-block::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: -1;
+    border-radius: 3px;
+    pointer-events: none;
+  }
+
+  .unified-picks-header {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    text-align: center;
+    font-size: 1.6em;
+    font-weight: bold;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid rgba(139, 115, 85, 0.6);
+    text-shadow: 0 0 10px #000, 0 0 5px #000;
+  }
+  
+  .unified-picks-header .p1-name { color: #7ba4e8; text-shadow: 0 0 8px rgba(123,164,232,0.4); }
+  .unified-picks-header .pick-title { color: #d4af37; }
+  .unified-picks-header .p2-name { color: #e87b7b; text-shadow: 0 0 8px rgba(232,123,123,0.4); }
+  
+  .unified-picks-body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+  }
+
+  /* Контейнеры пиков */
+  #p1-picks, #p2-picks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    align-items: flex-end;
+    min-height: 220px;
+  }
+
+  #p1-picks {
+    justify-content: flex-end;
+    padding-right: 50px;
+  }
+
+  #p2-picks {
+    justify-content: flex-start;
+    padding-left: 50px;
+  }
+
+  /* Ячейки пиков */
+  #p1-picks .hero-cell, #p2-picks .hero-cell {
+    width: auto;
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0;
+  }
+
+  /* Гифки пиков (заменили zoom) */
+  #p1-picks .hero-cell .hero-gif, #p2-picks .hero-cell .hero-gif {
+    width: auto;
+    height: auto;
+    max-height: none;
+    max-width: none;
+    zoom: 0.475; /* Тот же масштаб, что и в банах */
+    transform-origin: bottom center;
+  }
+
+  /* Зеркальное отражение для второго игрока */
+  #p2-picks .hero-gif {
+    transform: scaleX(-1);
+  }
+
+  /* ====== ТАБЛИЦА ЛИДЕРОВ ====== */
+  #leaderboard-screen {
+    max-width: 800px;
+  }
+
+  .leaderboard-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+    color: #e0d5c0;
+  }
+
+  .leaderboard-table th {
+    background: rgba(212, 175, 55, 0.2);
+    color: #d4af37;
+    padding: 10px 8px;
+    border-bottom: 2px solid #8b7355;
+    text-align: left;
+    font-size: 0.95em;
+  }
+
+  .leaderboard-table td {
+    padding: 8px;
+    border-bottom: 1px solid rgba(139, 115, 85, 0.3);
+  }
+
+  .leaderboard-table tr:hover td {
+    background: rgba(212, 175, 55, 0.08);
+  }
+
+  .leaderboard-table td:first-child {
+    color: #d4af37;
+    font-weight: bold;
+    width: 40px;
+  }
+
+  .leaderboard-table td:nth-child(3) {
+    color: #d4af37;
+    font-weight: bold;
+  }
+
+  /* ====== БЛОК ВЫБОРА ПОБЕДИТЕЛЯ ====== */
+.winner-selection {
+    position: relative;
+    margin: 25px 0;
+    padding: 25px;
+    border: 2px solid #d4af37;
+    border-radius: 5px;
+    background: url('https://i.ibb.co/4gwJTw2Q/font7.png') center / cover no-repeat;
+    text-align: center;
+    animation: fadeIn 0.6s ease-out forwards;
+    isolation: isolate;
+    overflow: hidden;
+}
+
+.winner-selection::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    z-index: -1;
+    border-radius: 3px;
+    pointer-events: none;
+}
+
+  .winner-selection h2 {
+    color: #d4af37;
+    margin-top: 0;
+    text-shadow: 0 0 10px #000;
+  }
+
+  .winner-selection .winner-btn-group {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 15px;
+  }
+
+  .list-empty { display: none; }
+  .section-label { margin: 0 0 6px; color: #d4af37; font-size: 0.95em; }
+  .hero-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; min-height: 24px; align-items: flex-start; justify-content: center; }
+  .hero-cell { display: flex; flex-direction: column; align-items: center; width: 110px; gap: 4px; flex: 0 0 auto; }
+  .hero-cell .hero-icon { width: 54px; height: 54px; max-width: 54px; cursor: help; border-radius: 4px; border: 1px solid #5a4a3a; background: #1a1410; object-fit: cover; flex-shrink: 0; }
+  .hero-cell .hero-gif { width: 90px; height: auto; max-height: 90px; object-fit: contain; image-rendering: pixelated; display: block; }
+  .hero-bans { width: 100%; margin-top: 3px; display: flex; flex-direction: column; gap: 1px; padding: 3px 4px; background: rgba(0, 0, 0, 0.35); border-radius: 3px; }
+  .hero-ban-tag { display: flex; align-items: center; gap: 3px; font-size: 1em; color: #d95b5b; line-height: 1.3; min-width: 0; position: relative; cursor: help; }
+  .hero-ban-tag > span { text-decoration: line-through; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1 1 auto; min-width: 0; }
+  .ban-ability-icon { width: 48px; height: 48px; flex-shrink: 0; border-radius: 3px; background: #1a1410; }
+  .ability-bans-row { display: flex; gap: 8px; flex-wrap: wrap; min-height: 24px; align-items: flex-start; justify-content: center; }
+  .ability-bans-row .hero-cell .hero-icon { width: 44px; height: 44px; max-width: 44px; }
+.ability-phase {
+    position: relative;
+    margin-top: 30px; padding: 20px;
+    border: 2px solid #d4af37; border-radius: 5px;
+    background: url('https://i.ibb.co/FqNtCJny/font5.png') center / cover no-repeat;
+    display: none;
+    isolation: isolate;
+}
+  .ability-phase::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: -1;
+    border-radius: 3px;
+    pointer-events: none;
+  }
+
+  .ability-phase.active { display: block; }
+  .ability-phase.p1 { border-color: #5b8bd9; }
+  .ability-phase.p2 { border-color: #d95b5b; }
+  .ability-phase h2 { color: #d4af37; margin-top: 0; }
+  .ability-status { padding: 10px 15px; margin-bottom: 15px; border-radius: 4px; font-size: 1.05em; }
+  .ability-status.p1 { background: rgba(60, 100, 180, 0.55); border-left: 4px solid #5b8bd9; }
+  .ability-status.p2 { background: rgba(180, 60, 60, 0.55); border-left: 4px solid #d95b5b; }
+  .ability-target { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .ability-target .hero-icon { width: 40px; max-width: 40px; }
+  .abilities { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 15px; }
+  .ability { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px 6px 6px; background: #2a2018; color: #e0d5c0; border: 1px solid #8b7355; cursor: pointer; font-family: Georgia, serif; font-size: 0.9em; border-radius: 3px; transition: all 0.15s; position: relative; }
+  .ability:hover:not(:disabled) { background: #3a2f25; border-color: #d4af37; }
+  .ability.banned { background: #4a1010; color: #777; border-color: #4a1010; }
+  .ability.banned span { text-decoration: line-through; }
+  .ability:disabled { cursor: not-allowed; opacity: 0.6; }
+  .ability-icon { width: 30px; height: 30px; object-fit: cover; border-radius: 3px; border: 1px solid #5a4a3a; background-color: #1a1410; flex-shrink: 0; }
+  .ability.banned .ability-icon { filter: grayscale(1) brightness(0.6); }
+  .ability-icon.placeholder { display: inline-flex; align-items: center; justify-content: center; font-size: 0.7em; color: #8b7355; background: #1a1410; border: 1px dashed #5a4a3a; }
+  .ability-tooltip { display: none; position: absolute; bottom: calc(100% + 6px); left: 0; background: rgba(26, 20, 16, 0.82); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); color: #e0d5c0; border: 1px solid #d4af37; border-radius: 4px; padding: 10px 12px; font-size: 1em; line-height: 1.45; min-width: 468px; max-width: 90vw; box-sizing: border-box; overflow-wrap: break-word; word-break: break-word; max-height: 50vh;
+  overflow-y: auto; z-index: 10; box-shadow: 0 4px 16px rgba(0,0,0,0.7); pointer-events: none; text-align: left; }
+  .ability-tooltip .effect-tag { display: block; margin-right: 0; margin-bottom: 4px; overflow-wrap: break-word; word-break: break-word; }
+  .ability:hover:not(:disabled) .ability-tooltip { display: block; }
+  .hero-ban-tag:hover .ability-tooltip { display: block; }
+  .tt-desc { color: #d4af37; font-style: italic; margin-bottom: 8px; font-size: 0.95em; }
+  .tt-table { width: 100%; border-collapse: collapse; }
+  .tt-table td { padding: 3px 6px; vertical-align: top; border-bottom: 1px solid #2a2018; }
+  .tt-table td:first-child { color: #8b7355; width: 90px; white-space: nowrap; }
+  .tt-table td:last-child { color: #e0d5c0; overflow-wrap: break-word; word-break: break-word; max-width: 0; }
+  .effect-tag { display: inline; margin-right: 10px; vertical-align: middle; overflow-wrap: break-word; word-break: break-word; }
+  .effect-tag img { width: 16px; height: 16px; vertical-align: middle; display: inline-block; margin: 0 3px; }
+  .controls { text-align: center; margin-top: 25px; }
+  
+/* Универсальные стили для кнопок и ссылок с классом main-btn */
+button.main-btn,
+a.main-btn {
+  position: relative;
+  background: transparent;
+  border: none;
+  padding: 14px 30px;
+  margin: 4px;
+  color: #d4af37;
+  font-family: Georgia, serif;
+  font-size: 1em;
+  cursor: pointer;
+  min-width: 220px;
+  min-height: 56px;
+  text-shadow: 0 0 6px #000, 0 0 12px #000;
+  isolation: isolate;
+  transition: transform 0.1s;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+button.main-btn::before,
+a.main-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url('https://i.ibb.co/xtBsDnTS/start-button.png') center / 100% 100% no-repeat;
+  z-index: -1;
+  pointer-events: none;
+  transition: filter 0.15s;
+}
+
+button.main-btn:hover:not(:disabled)::before,
+a.main-btn:hover::before {
+  filter: brightness(1.2);
+}
+
+button.main-btn:active:not(:disabled),
+a.main-btn:active {
+  transform: scale(0.97);
+}
+
+button.main-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Кнопка "Поддержать" с фоном button2.png */
+a.support-btn::before {
+  background: url('https://i.ibb.co/BVbp2QD5/button3.png') center / 100% 100% no-repeat;
+}
+  
+.hero-tooltip { display: none; position: fixed; z-index: 300; background: rgba(26, 20, 16, 0.82); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); color: #e0d5c0; border: 1px solid #d4af37; border-radius: 5px; padding: 10px 12px; font-size: 0.8em; line-height: 1.4; min-width: 288px; max-width: 384px; box-shadow: 0 6px 20px rgba(0,0,0,0.8); pointer-events: none; }
+  .hero-tooltip.active { display: block; }
+  .hero-tooltip .ht-title { color: #d4af37; font-size: 1.15em; font-weight: bold; text-align: center; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid #3a2f25; }
+  .hero-tooltip .ht-section { color: #8b7355; font-size: 0.75em; letter-spacing: 1.5px; text-transform: uppercase; margin: 8px 0 3px; }
+  .hero-tooltip .ht-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px 14px; }
+  .hero-tooltip .ht-row { display: flex; justify-content: space-between; gap: 8px; font-size: 0.95em; }
+  .hero-tooltip .ht-label { color: #8b7355; }
+  .hero-tooltip .ht-value { color: #e0d5c0; font-weight: bold; }
+  .hero-tooltip .ht-value.good { color: #d4af37; }
+  .hero-tooltip .ht-value.bad { color: #d95b5b; }
+  .hero-tooltip .ht-icon { width: 14px; height: 14px; vertical-align: middle; margin-left: 4px; border-radius: 2px; flex-shrink: 0; }
+  .hero-animation-overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 100; pointer-events: none; }
+  .hero-animation-backdrop { position: absolute; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(circle at center, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.15) 55%, rgba(0,0,0,0) 80%); will-change: opacity; }
+  .hero-animation-overlay img { max-width: 42vw; max-height: 62vh; object-fit: contain; opacity: 0; transform-origin: center center; filter: drop-shadow(0 0 30px rgba(0,0,0,0.95)); will-change: opacity, transform; }
+  @keyframes hero-reveal { 0% { opacity: 0; transform: scale(1.4); } 10% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(0.95); } }
+  @keyframes hero-backdrop-reveal { 0% { opacity: 0; } 10% { opacity: 1; } 100% { opacity: 0; } }
+  .hero-animation-overlay.active .hero-animation-backdrop { animation: hero-backdrop-reveal 1.5s ease-out forwards; }
+  .hero-animation-overlay.active img { animation: hero-reveal 1.5s ease-out forwards; }
+  @keyframes ban-flash { 0% { background: #4a1010; transform: scale(1); } 15% { background: #ff2a2a; transform: scale(1.1) rotate(-2deg); box-shadow: 0 0 25px rgba(255,42,42,0.9); } 35% { background: #4a1010; transform: scale(0.94) rotate(2deg); } 55% { background: #ff2a2a; transform: scale(1.05) rotate(-1deg); box-shadow: 0 0 15px rgba(255,42,42,0.6); } 100% { background: #4a1010; transform: scale(1); opacity: 0.6; } }
+  .hero.just-banned { animation: ban-flash 0.75s ease-out; }
+  @keyframes pick-pop-p1 { 0% { transform: scale(1); box-shadow: 0 0 0 rgba(91,139,217,0); } 30% { transform: scale(1.18); box-shadow: 0 0 28px rgba(91,139,217,1); } 60% { transform: scale(0.94); } 100% { transform: scale(1); box-shadow: 0 0 8px rgba(91,139,217,0.35); } }
+  .hero.just-picked-p1 { animation: pick-pop-p1 0.65s ease-out; }
+  @keyframes pick-pop-p2 { 0% { transform: scale(1); box-shadow: 0 0 0 rgba(217,91,91,0); } 30% { transform: scale(1.18); box-shadow: 0 0 28px rgba(217,91,91,1); } 60% { transform: scale(0.94); } 100% { transform: scale(1); box-shadow: 0 0 8px rgba(217,91,91,0.35); } }
+  .hero.just-picked-p2 { animation: pick-pop-p2 0.65s ease-out; }
+  @keyframes status-slide { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: translateY(0); } }
+  .status.changed { animation: status-slide 0.35s ease-out; }
+  @keyframes phase-in { from { opacity: 0; transform: translateY(0) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  .ability-phase.just-activated { animation: phase-in 0.5s ease-out; }
+  @keyframes ability-ban-flash { 0% { transform: scale(1); background: #4a1010; } 30% { transform: scale(1.12); background: #ff2a2a; box-shadow: 0 0 20px rgba(255,42,42,0.9); } 100% { transform: scale(1); background: #4a1010; box-shadow: 0 0 0 rgba(255,42,42,0); } }
+  .ability.just-banned { animation: ability-ban-flash 0.6s ease-out; }
+  .hero:active:not(.disabled) { transform: scale(0.96) !important; }
+  .ability:active:not(:disabled) { transform: scale(0.95) !important; }
+  .lobby-input { padding: 10px; background: #1a1410; color: #e0d5c0; border: 1px solid #8b7355; border-radius: 4px; font-family: Georgia, serif; font-size: 1em; min-width: 220px; text-align: center; }
+  .lobby-input:focus { outline: none; border-color: #d4af37; }
+
+.phase-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+}
+.phase-splash.active { opacity: 1; visibility: visible; }
+.phase-splash-text {
+  color: #d4af37;
+  font-size: 4em;
+  text-align: center;
+  text-shadow: 0 0 30px #000, 0 0 15px #000, 0 0 60px rgba(212, 175, 55, 0.5);
+  padding: 24px 48px;
+  min-width: 200px;
+  max-width: 90vw;
+  line-height: 1.3;
+  opacity: 0;
+  background: rgba(0, 0, 0, 0.85);
+  border-radius: 10px;
+  border: 0px solid rgba(212, 175, 55, 0.35);
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.8);
+  box-sizing: border-box;
+}
+
+.phase-splash.active .phase-splash-text {
+  animation: phase-splash-anim 1.8s ease-out forwards;
+}
+
+/* ====== АНИМАЦИЯ ПОЯВЛЕНИЯ БЛОКОВ ====== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Применяем анимацию к нужным блокам */
+#heroes,
+.unified-bans-block,
+.unified-picks-block,
+.unified-abilities-block {
+  animation: fadeIn 0.6s ease-out forwards;
+}
+
+@keyframes phase-splash-anim {
+  0%   { opacity: 0; transform: scale(1.15); }
+  10%  { opacity: 1; transform: scale(1); }
+  85%  { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.95); }
+}
+
+/* ====== АНИМАЦИИ ДЛЯ ЭКРАНА НАСТРОЕК ====== */
+.setup-screen {
+  animation: fadeIn 0.6s ease-out forwards;
+}
+
+/* ====== АНИМАЦИИ ДЛЯ КНОПОК УПРАВЛЕНИЯ ====== */
+#draft-screen .controls .main-btn {
+  animation: fadeIn 0.6s ease-out forwards;
+  opacity: 0;
+}
+
+#draft-screen .controls .main-btn:nth-child(1) { animation-delay: 0.1s; }
+#draft-screen .controls .main-btn:nth-child(2) { animation-delay: 0.25s; }
+#draft-screen .controls .main-btn:nth-child(3) { animation-delay: 0.4s; }
+
+/* Анимации появления для монеты и кнопок */
+#coin-display, 
+#net-coin-display,
+#start-btn,
+#start-net-btn {
+  animation: fadeIn 0.6s ease-out forwards;
+}
+
+#coin-result.fade-in,
+#net-coin-result.fade-in {
+  animation: fadeIn 0.6s ease-out forwards;
+}
+
+/* ====== АНИМАЦИИ ДЛЯ БЛОКА СПОСОБНОСТЕЙ ====== */
+@keyframes tag-pop-in {
+  0% { opacity: 0; transform: scale(0.5); }
+  70% { transform: scale(1.1); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+#p1-ability-bans .hero-ban-tag.just-added,
+#p2-ability-bans .hero-ban-tag.just-added {
+  animation: tag-pop-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes hero-icon-slide-in {
+  0% { opacity: 0; transform: translateY(-20px) scale(0.8); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+#p1-ability-bans .hero-cell.just-added .hero-icon,
+#p2-ability-bans .hero-cell.just-added .hero-icon {
+  animation: hero-icon-slide-in 0.4s ease-out forwards;
+}
+
+/* ====== АНИМАЦИЯ ПОЯВЛЕНИЯ ПЕРСОНАЖЕЙ В БАНАХ И ПИКАХ ====== */
+@keyframes character-fade-in {
+  0% { 
+    opacity: 0; 
+    filter: brightness(3) grayscale(1);
+  }
+  100% { 
+    opacity: 1; 
+    filter: brightness(1) grayscale(0);
+  }
+}
+
+#p1-bans .hero-cell.just-added,
+#p2-bans .hero-cell.just-added,
+#p1-picks .hero-cell.just-added,
+#p2-picks .hero-cell.just-added {
+  animation: character-fade-in 0.8s ease-out forwards;
+}
+
+.ability.picked {
+  background: #1a4a20;
+  color: #c0f0c0;
+  border-color: #2ecc71;
+}
+.ability.picked span { text-decoration: none; }
+
+@keyframes ability-pick-flash {
+  0% { transform: scale(1); background: #1a4a20; }
+  30% { transform: scale(1.12); background: #2ecc71; box-shadow: 0 0 20px rgba(46, 204, 113, 0.9); }
+  100% { transform: scale(1); background: #1a4a20; box-shadow: 0 0 0 rgba(46, 204, 113, 0); }
+}
+.ability.just-picked { animation: ability-pick-flash 0.6s ease-out; }
+
+/* Плавное уменьшение всего экрана драфта после завершения */
+#draft-screen {
+  transition: transform 0.6s ease-out;
+  transform-origin: top center; /* Уменьшаем от верхнего центра, чтобы блок оставался по центру */
+}
+
+#draft-screen.draft-completed {
+  transform: scale(0.8);
+}
+
+</style>
+</head>
+<body>
+
+<div id="bg-decor"></div>
+
+<div class="container">
+  <header class="site-header">
+    <img src="https://i.ibb.co/MkLhNZzX/font1-1.png" alt="Darkest Dungeon" class="header-banner" onerror="this.style.display='none'">
+  </header>
+
+<div id="start-screen" class="setup-screen">
+  <h2>Darkest Dungeon Draft v. 0.7.3</h2>
+  <p style="color: #8b7355;">Выберите режим игры</p>
+  <div style="display:flex; flex-direction:column; gap:15px; align-items:center; margin-top:25px;">
+    <button class="main-btn" onclick="showLocalGame()" style="min-width:260px; padding:14px 25px;">Локальный</button>
+    <button class="main-btn" onclick="showNetworkGame()" style="min-width:260px; padding:14px 25px;">Сетевой</button>
+    <p style="color: #8b7355;">Дополнительно</p>
+    <button class="main-btn" onclick="showLeaderboard()" style="min-width:260px; padding:14px 25px;">Таблица лидеров</button>
+    <button class="main-btn" onclick="showAuthors()" style="min-width:260px; padding:14px 25px;">О проекте</button>
+  </div>
+</div>
+
+  <div id="authors-screen" class="setup-screen" style="display:none; max-width:700px;">
+    <h2>О проекте</h2>
+    <p style="color: #e0d5c0; font-size: 1.05em; line-height: 1.6; text-align: left;">
+      Данный проект не является официальным продуктом или модификацией от Red Hook Studios, также компания Red Hook Studios Inc. не несет ответственности за любые изменения или ущерб, возникшие в результате его использования. Разработка ведется единолично с помощью нейросетевых агентов. Весь исходный код проекта находится в открытом доступе. Все используемые графические материалы принадлежат Red Hook Studios. Использование данного проекта не нарушает политики конфиденциальности и правила пользования.<br><br>
+      Разработчик — <strong>Иван Кижаев (a.k.a. Grass Killer)</strong>.<br><br>
+      Идея, дизайн и код распространяются исключительно через GitHub: 
+      <a href="https://github.com/IvanKizhaev/Darkest-Dungeon-Draft" target="_blank" style="color: #d4af37; text-decoration: underline;">
+        github.com/IvanKizhaev/Darkest-Dungeon-Draft
+      </a>
+<br><br>
+Отказ от ответственности: Оригинальный файл распространяется только через ссылку, указанную выше. Автор не несет ответственности за любой вред, причиненный вашему устройству, а также за некорректную работу программы при ее скачивании со сторонних ресурсов.
+      <br><br>
+      Распространение, копирование и передача данного кода третьим лицам, внесение изменений, модификация, декомпилирование разрешены с указанием ссылки на данный первоисточник. Все функции открыты и доступны для всех. Если вам понравился проект и вы хотите добровольно поддержать автора — нажмите «Поддержать» ниже.
+      <br><br>
+<p><strong>Использование данного кода в коммерческих целях строго запрещено!</strong> <br>Только для некоммерческого использования.</p>
+    </p>
+    <div style="display:flex; gap:15px; justify-content:center; flex-wrap:wrap; margin-top:25px;">
+      <a href="https://www.donationalerts.com/r/grasskiller" target="_blank" class="main-btn support-btn">Поддержать</a>
+      </a>
+      <button class="main-btn" onclick="backFromAuthors()">← Назад</button>
+    </div>
+  </div>
+
+<div id="mode-select-screen" class="setup-screen" style="display:none;">
+  <h2>Выберите режим сетевой игры</h2>
+  <div style="display:flex; flex-direction:column; gap:15px; align-items:center; margin-top:25px;">
+    <button class="main-btn" onclick="startNetworkGame('normal')" style="min-width:260px;">Обычный</button>
+    <button class="main-btn" onclick="startNetworkGame('ranked')" style="min-width:260px;">Рейтинговый</button>
+  </div>
+  <div style="margin-top:20px;">
+    <button class="main-btn" onclick="backFromModeSelect()">← Назад</button>
+  </div>
+</div>
+
+  <div id="leaderboard-screen" class="setup-screen" style="display:none; max-width:800px;">
+    <h2>Таблица лидеров</h2>
+    <div id="leaderboard-content" style="margin: 20px 0; min-height: 100px;"></div>
+    <button class="main-btn" onclick="backFromLeaderboard()">← Назад</button>
+  </div>
+
+  <div id="lobby-screen" class="setup-screen" style="display:none;">
+    <h2>Сетевое лобби</h2>
+
+    <div id="lobby-preconnect">
+      <div style="display:flex; flex-direction:column; gap:12px; align-items:center;">
+        <button id="host-btn" class="main-btn" onclick="hostLobby()">Создать лобби</button>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center;">
+          <input id="join-code" class="lobby-input" placeholder="Например, ABCD12" maxlength="6">
+          <button id="join-btn" class="main-btn" onclick="joinLobbyFromInput()">Присоединиться</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="lobby-code-display" style="display:none; font-size:1.2em; color:#d4af37; text-align:center; margin:12px 0;"></div>
+    <div id="lobby-status" style="color:#d4af37; min-height:24px; text-align:center; margin:12px 0;"></div>
+
+    <div id="lobby-name-input" style="display:none; margin:16px 0;">
+      <label style="display:block; color:#d4af37; margin-bottom:8px;">Ваше имя:</label>
+      <input id="net-name-input" class="lobby-input" maxlength="20" placeholder="Введите имя">
+      <div style="margin-top:10px;">
+        <button id="name-ready-btn" class="main-btn" onclick="submitName()">Готов</button>
+      </div>
+    </div>
+
+    <div id="lobby-names-status" style="margin:12px 0; text-align:center; color:#d4af37;"></div>
+
+    <div id="lobby-coin-area" style="display:none; margin:16px 0;">
+      <button id="flip-net-btn" class="main-btn" onclick="flipNetCoin()" style="display:none;">Бросить монетку</button>
+      <div id="net-coin-display" class="coin-display" style="display:none;"><div id="net-coin" class="coin"><img id="net-coin-img" src="" alt=""></div></div>
+      <div id="net-coin-result" class="coin-result"></div>
+    </div>
+
+    <div style="margin-top:20px;">
+      <button id="start-net-btn" class="main-btn" style="display:none;" onclick="startNetworkDraftAsHost()">Начать сетевой драфт</button>
+      <button class="main-btn" onclick="backToStartFromLobby()">← Назад</button>
+    </div>
+  </div>
+
+  <div id="setup-screen" class="setup-screen" style="display:none;">
+  <h2>Локальная игра</h2>
+    <div class="setup-inputs">
+      <div><label for="name-input-1">Игрок 1</label><input id="name-input-1" maxlength="20" placeholder="Введите имя" value="Игрок 1"></div>
+      <div><label for="name-input-2">Игрок 2</label><input id="name-input-2" maxlength="20" placeholder="Введите имя" value="Игрок 2"></div>
+    </div>
+    <button id="flip-btn" class="main-btn" onclick="flipCoin()">Бросить монетку</button>
+    <div id="coin-display" class="coin-display" style="display:none"><div id="coin" class="coin"><img id="coin-img" src="" alt=""></div></div>
+    <div id="coin-result" class="coin-result"></div>
+   <button id="start-btn" class="main-btn" onclick="startDraft()" style="display:none">Начать драфт</button>
+    <button class="main-btn" onclick="backToStart()">← Назад</button>
+  </div>
+
+  <div id="draft-screen" style="display:none">
+    <div id="status" class="status">Загрузка…</div>
+    <div id="heroes" class="heroes"></div>
+
+    <!-- НОВЫЙ ОБЪЕДИНЕННЫЙ БЛОК БАНОВ -->
+    <div class="unified-bans-block">
+      <div class="unified-bans-header">
+        <div class="p1-name" id="bans-p1-name">Игрок 1</div>
+        <div class="ban-title">Баны</div>
+        <div class="p2-name" id="bans-p2-name">Игрок 2</div>
+      </div>
+      <div class="unified-bans-body">
+        <div id="p1-bans" class="hero-row"></div>
+        <div id="p2-bans" class="hero-row"></div>
+      </div>
+    </div>
+
+    <!-- НОВЫЙ ОБЪЕДИНЕННЫЙ БЛОК ПИКОВ -->
+    <div class="unified-picks-block">
+      <div class="unified-picks-header">
+        <div class="p1-name" id="picks-p1-name">Игрок 1</div>
+        <div class="pick-title">Пики</div>
+        <div class="p2-name" id="picks-p2-name">Игрок 2</div>
+      </div>
+      <div class="unified-picks-body">
+        <div id="p1-picks" class="hero-row"></div>
+        <div id="p2-picks" class="hero-row"></div>
+      </div>
+    </div>
+
+            <div class="unified-abilities-block">
+      <div class="unified-abilities-header">
+        <div class="p1-name" id="abilities-p1-name">Игрок 1</div>
+        <div class="ability-title">Способности</div>
+        <div class="p2-name" id="abilities-p2-name">Игрок 2</div>
+      </div>
+      <div class="unified-abilities-body">
+        <div id="p1-ability-bans" class="ability-bans-row"></div>
+        <div id="p2-ability-bans" class="ability-bans-row"></div>
+      </div>
+    </div>
+
+    <div id="ability-phase" class="ability-phase"></div>
+    <div id="winner-selection" class="winner-selection" style="display:none;"></div>
+
+    <div class="controls">
+      <button class="main-btn" onclick="resetDraft()">Сбросить драфт</button>
+      <button class="main-btn" id="random-draft-btn" onclick="randomDraft()">Случайный драфт</button>
+      <button class="main-btn" onclick="backToSetup()">← Назад</button>
+    </div>
+  </div>
+</div>
+
+<div id="hero-animation-overlay" class="hero-animation-overlay">
+  <div class="hero-animation-backdrop"></div>
+  <img id="hero-animation-img" src="" alt="">
+</div>
+
+<div id="hero-tooltip" class="hero-tooltip"></div>
+
+<div id="phase-splash" class="phase-splash">
+  <div class="phase-splash-text" id="phase-splash-text"></div>
+</div>
+
+<script>
+
+// ====== МОНЕТА ======
+const COIN_HEADS_URL = "https://i.ibb.co/wrcyK7tG/coinflip-1.png";
+const COIN_TAILS_URL  = "https://i.ibb.co/1GyYZfX9/coinflip-2.png";
+
+function showAuthors() {
+  document.getElementById("start-screen").style.display = "none";
+  document.getElementById("lobby-screen").style.display = "none";
+  document.getElementById("setup-screen").style.display = "none";
+  document.getElementById("draft-screen").style.display = "none";
+  document.getElementById("leaderboard-screen").style.display = "none";
+  document.getElementById("authors-screen").style.display = "block";
+  document.querySelector('.site-header').style.display = "block";
+}
+
+function backFromAuthors() {
+  document.getElementById("authors-screen").style.display = "none";
+  document.getElementById("start-screen").style.display = "block";
+}
+
+function setCoinFace(imgId, face) {
+  const img = document.getElementById(imgId);
+  if (!img) return;
+  const url = face === "tails" ? COIN_TAILS_URL : COIN_HEADS_URL;
+  if (url) img.src = url;
+}
+
+// ====== ГЕРОИ ======
+const HEROES = [
+  "Highwayman", "Hellion", "Grave Robber", "Vestal", "Shieldbreaker",
+  "Plague Doctor", "Man-at-Arms", "Occultist", "Leper", "Crusader",
+  "Flagellant", "Arbalest", "Bounty Hunter", "Abomination", 
+  "Antiquarian", "Musketeer", "Jester", "Houndmaster",
+];
+
+const HERO_NAMES_RU = {
+  "Abomination":   "Выродок",
+  "Antiquarian":   "Антиквар",
+  "Arbalest":      "Арбалетчица",
+  "Bounty Hunter": "Наёмник",
+  "Crusader":      "Крестоносец",
+  "Flagellant":    "Самобичеватель",
+  "Grave Robber":  "Могильная воровка",
+  "Hellion":       "Дикарка",
+  "Highwayman":    "Разбойник",
+  "Houndmaster":   "Дрессировщик",
+  "Jester":        "Шут",
+  "Leper":         "Прокажённый",
+  "Man-at-Arms":   "Воитель",
+  "Musketeer":     "Мушкетёр",
+  "Occultist":     "Оккультист",
+  "Plague Doctor": "Чумной доктор",
+  "Shieldbreaker": "Щитолом",
+  "Vestal":        "Весталка"
+};
+
+const ABILITY_NAMES_RU = {
+  "Abomination": {
+    "Manacles": "Путы",
+    "Beast's Bile": "Звериная желчь",
+    "Absolution": "Отпущение",
+    "Rake": "Рваная рана",
+    "Rage": "Ярость",
+    "Slam": "Удар"
+  },
+  "Antiquarian": {
+    "Nervous Stab": "Робкий выпад",
+    "Festering Vapours": "Едкие испарения",
+    "Flashpowder": "Слепящий порошок",
+    "Protect Me": "Защити меня",
+    "Invigorating Vapours": "Бодрящие благовония",
+    "Rejuvenating Vapours": "Омолаживающие испарения",
+    "Take Cover": "Поиск укрытия!"
+  },
+  "Arbalest": {
+    "Sniper Shot": "Снайперский выстрел",
+    "Suppressing Fire": "Подавляющий огонь",
+    "Sniper's Mark": "Метка снайпера",
+    "Bola": "Бола",
+    "Illuminating Flare": "Яркая вспышка",
+    "Blindfire": "Огонь в слепую",
+    "Battlefield Bandage": "Боевая перевязка"
+  },
+  "Bounty Hunter": {
+    "Collect Bounty": "Вознаграждение",
+    "Mark for Death": "Смертная метка",
+    "Uppercut": "Апперкот",
+    "Come Hither!": "Иди сюда!",
+    "Flashbang": "Светошумовая граната",
+    "Finish Him": "Добивание",
+    "Caltrops": "Шипы"
+  },
+  "Crusader": {
+    "Smite": "Сокрушение",
+    "Stunning Blow": "Оглушающий удар",
+    "Holy Lance": "Святое копьё",
+    "Bulwark of Light": "Алтарь света",
+    "Rally to the Flame": "Гонка за пламенем",
+    "Inspiring Cry": "Воодушевление",
+    "Zealous Accusation": "Яросное обвинение"
+  },
+  "Flagellant": {
+    "Punish": "Наказание",
+    "Rain of Sorrows": "Дождь из слёз",
+    "Exsanguinate": "Кровопускание",
+    "Redeem": "Искупление",
+    "Endure": "Терпение",
+    "Reclaim": "Возвращение",
+    "Suffer": "Страдание"
+  },
+  "Grave Robber": {
+    "Pick to the Face": "Киркой в лицо",
+    "Lunge": "Выпад",
+    "Shadow Fade": "Уход в тень",
+    "Panic Darts": "Дротики ужаса",
+    "Toxin Trickery": "Подлый токсин",
+    "Thrown Dagger": "Бросок ножа",
+    "Flashing Daggers": "Мерцающие кинжалы"
+  },
+  "Hellion": {
+    "Wicked Hack": "Глубокий рубец",
+    "Iron Swan": "Железный лебедь",
+    "If It Bleeds": "Если кровоточит",
+    "Terrifying YAWP!": "Пугающий ВОПЛЬ!",
+    "Breakthrough": "Прорыв",
+    "Adrenaline Rush": "Прилив адреналина",
+    "Bleed Out": "Истечь кровью"
+  },
+  "Highwayman": {
+    "Wicked Slice": "Глубокий порез",
+    "Pistol Shot": "Пистолетный выстрел",
+    "Point Blank Shot": "Неприцельный выстрел",
+    "Grapeshot Blast": "Картечный залп",
+    "Vendetta": "Вендетта",
+    "Duelist's Advance": "Боевой натиск",
+    "Open Vein": "Порез вены"
+  },
+  "Houndmaster": {
+    "Hound's Rush": "Бросок гончей",
+    "Hound's Harry": "Наскок гончей",
+    "Target Whistle": "Прицельный свист",
+    "Cry Havoc": "Губительный крик",
+    "Lick Wounds": "Зализывание ран",
+    "Blackjack": "Блэкджек",
+    "Guard Dog": "Сторожевой пёс"
+  },
+  "Jester": {
+    "Dirk Stab": "Удар кинжалом",
+    "Finale": "Финал",
+    "Solo": "Соло",
+    "Mortal Wound": "Смертельная рана",
+    "Battle Ballad": "Боевая баллада",
+    "Inspiring Tune": "Бодрящая мелодия",
+    "Harvest": "Урожай"
+  },
+  "Leper": {
+    "Chop": "Рубец",
+    "Hew": "Сечка",
+    "Intimidate": "Запугивание",
+    "Purge": "Очищение",
+    "Solemnity": "Обряд",
+    "Revenge": "Месть",
+    "Withstand": "Выдержка"
+  },
+  "Man-at-Arms": {
+    "Crush": "Сокрушение",
+    "Rampart": "Укрепление",
+    "Bellow": "Рёв",
+    "Defender": "Защитник",
+    "Retribution": "Воздаяние",
+    "Command": "Команда",
+    "Bolster": "Усиление"
+  },
+  "Occultist": {
+    "Sacrificial Stab": "Жертвенный порез",
+    "Abyssal Artillery": "Бездонная артиллерия",
+    "Weakening Curse": "Ослабляющее проклятие",
+    "Wyrd Reconstruction": "Восстановление",
+    "Vulnerability Hex": "Проклятие уязвимости",
+    "Stygian Embrace": "Объятие тьмы",
+    "Daemon's Pull": "Демоническая тяга"
+  },
+  "Plague Doctor": {
+    "Noxious Blast": "Ядовитый залп",
+    "Plague Grenade": "Чумная граната",
+    "Blinding Gas": "Слепящий газ",
+    "Battlefield Medicine": "Боевая медицина",
+    "Incision": "Надрез",
+    "Emboldening Vapours": "Ободряющий пар",
+    "Disorienting Blast": "Дезориентирующий залп"
+  },
+  "Vestal": {
+    "Judgement": "Осуждение",
+    "Mace Bash": "Удар булавой",
+    "Hand of Light": "Рука света",
+    "Dazzling Light": "Слепящий свет",
+    "Divine Grace": "Божья милость",
+    "Divine Comfort": "Божье утешение",
+    "Illumination": "Освещение"
+  },
+  "Shieldbreaker": {
+    "Pierce": "Пробивание",
+    "Puncture": "Ошеломление",
+    "Captivate": "Очарование",
+    "Impale": "Пронзание",
+    "Adder's Kiss": "Змеиный поцелуй",
+    "Serpent Sway": "Раскачивание змеи",
+    "Expose": "Прокалывание"
+  },
+  "Musketeer": {
+    "Aimed Shot": "Прицельный выстрел",
+    "Smokescreen": "Дымовая завеса",
+    "Call the Shot": "Указать цель",
+    "Buckshot": "Картечь",
+    "Quickdraw": "Быстрая реакция",
+    "Ranging Shot": "Дальний выстрел",
+    "Patch Up": "Подлечить"
+  }
+};
+
+function abilityNameRu(hero, ability) {
+  return (ABILITY_NAMES_RU[hero] && ABILITY_NAMES_RU[hero][ability]) || ability;
+}
+
+const BAN_GIFS = {
+  "Abomination":   "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/c/c1/Abom_kneel.png/revision/latest?cb=20200620192435",
+  "Antiquarian":   "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/4/4f/Antiq_camp.png/revision/latest?cb=20200620195144",
+  "Arbalest":      "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/d/d7/Arbalest_camp.png/revision/latest?cb=20200620200214",
+  "Bounty Hunter": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/6/68/Bounty_hunter_camp.png/revision/latest?cb=20200620202255",
+  "Crusader":      "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/6/62/Crus_camp.png/revision/latest?cb=20200614201541",
+  "Flagellant":    "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/2/24/Flagellant_camp.png/revision/latest?cb=20200706203850",
+  "Grave Robber":  "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/8/82/Grave_robber_camp.png/revision/latest?cb=20200620204412",
+  "Hellion":       "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/3/31/Hellion_camp.png/revision/latest?cb=20200620210542",
+  "Highwayman":    "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/7/7b/Highw_camp.png/revision/latest?cb=20200616154556",
+  "Houndmaster":   "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/5/5f/Houndmaster_camp.png/revision/latest?cb=20200620212301",
+  "Jester":        "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/0/03/Jester_camp.png/revision/latest?cb=20200620215118",
+  "Leper":         "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/d/d8/Leper_camp.png/revision/latest?cb=20200620215754",
+  "Man-at-Arms":   "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/4/4d/Man_at_arms_camp.png/revision/latest?cb=20200620221002",
+  "Musketeer":     "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/4/44/Musketeer_camp.png/revision/latest?cb=20200706195306",
+  "Occultist":     "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/0/02/Occultist_camp.png/revision/latest?cb=20200616162643",
+  "Plague Doctor": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/1/15/Plague_camp.png/revision/latest?cb=20200616160414",
+  "Shieldbreaker": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/8/8f/Shieldbreaker_camp.png/revision/latest?cb=20200706201445",
+  "Vestal":        "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/6/60/Vest_camp.png/revision/latest?cb=20200615162400"
+};
+
+const PICK_GIFS = {
+  "Abomination":   "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/e/e2/Abom_combat_man.gif/revision/latest?cb=20230224164157",
+  "Antiquarian":   "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/7/7c/Anti_combat.gif/revision/latest?cb=20230224164630",
+  "Arbalest":      "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/e/ea/Arb_combat.gif/revision/latest?cb=20230224164910",
+  "Bounty Hunter": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/3/37/Bh_combat.gif/revision/latest?cb=20230224165145",
+  "Crusader":      "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/6/6b/Crusader_combat.gif/revision/latest?cb=20230224165322",
+  "Flagellant":    "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/0/0f/Flag_combat.gif/revision/latest?cb=20230224165516",
+  "Grave Robber":  "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/0/0a/Graverobber_combat.gif/revision/latest?cb=20230224165654",
+  "Hellion":       "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/f/f5/Hellion_combat.gif/revision/latest?cb=20230224165824",
+  "Highwayman":    "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/4/49/Hwm_combat.gif/revision/latest?cb=20230224170102",
+  "Houndmaster":   "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/8/80/Houndmaster_combat.gif/revision/latest?cb=20230224170227",
+  "Jester":        "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/2/26/Jester_combat.gif/revision/latest?cb=20230224170358",
+  "Leper":         "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/e/e8/Leper_combat.gif/revision/latest?cb=20230224170617",
+  "Man-at-Arms":   "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/c/cf/Maa_combat.gif/revision/latest?cb=20230224170807",
+  "Musketeer":     "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/8/88/Musk_combat.gif/revision/latest?cb=20230224170953",
+  "Occultist":     "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/c/c6/Occ_combat.gif/revision/latest?cb=20230224171131",
+  "Plague Doctor": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/f/f9/Pd_combat.gif/revision/latest?cb=20230224171306",
+  "Shieldbreaker": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/7/7d/Sb_combat.gif/revision/latest?cb=20230224171731",
+  "Vestal":        "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/7/75/Vestal_combat.gif/revision/latest?cb=20230224171619"
+};
+
+const AFFLICTED_IMAGES = {
+  "Abomination":   "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/8/86/Abom_afflicted.png/revision/latest?cb=20200620192018",
+  "Antiquarian":   "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/6/6e/Antiq_afflicted.png/revision/latest?cb=20200620194345",
+  "Arbalest":      "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/e/e3/Arbalest_afflicted.png/revision/latest?cb=20200620195959",
+  "Bounty Hunter": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/0/0f/Bounty_hunter_afflicted.png/revision/latest?cb=20200620202005",
+  "Crusader":      "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/e/e2/Crus_afflict.png/revision/latest?cb=20200614200654",
+  "Flagellant":    "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/7/7d/Flagellant_afflicted.png/revision/latest/scale-to-width-down/1000?cb=20200706203311",
+  "Grave Robber":  "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/3/3d/Grave_robber_afflicted.png/revision/latest?cb=20200620204135",
+  "Hellion":       "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/2/22/Hellion_afflicted.png/revision/latest?cb=20200620210010",
+  "Highwayman":    "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/d/dc/Highw_afflicted.png/revision/latest?cb=20200616154348",
+  "Houndmaster":   "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/1/18/Houndmaster_afflicted.png/revision/latest?cb=20200620211725",
+  "Jester":        "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/e/ed/Jester_afflicted.png/revision/latest?cb=20200620214840",
+  "Leper":         "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/a/ac/Leper_afflicted.png/revision/latest?cb=20200620215613",
+  "Man-at-Arms":   "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/4/4f/Man_at_arms_afflicted.png/revision/latest?cb=20200620220821",
+  "Musketeer":     "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/a/af/Musketeer_afflicted.png/revision/latest?cb=20200706195011",
+  "Occultist":     "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/0/02/Occultist_afflicted.png/revision/latest?cb=20200616162432",
+  "Plague Doctor": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/1/1c/Plague_afflicted.png/revision/latest?cb=20200616160152",
+  "Shieldbreaker": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/9/96/Shieldbreaker_afflicted.png/revision/latest?cb=20200706201019",
+  "Vestal":        "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/8/81/Vest_afflict.png/revision/latest?cb=20200615162121"
+};
+
+const HEROIC_IMAGES = {
+  "Abomination":   "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/f/fc/Abom_heroic_hum.png/revision/latest?cb=20200620193459",
+  "Antiquarian":   "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/0/0c/Antiquarian.sprite.heroic.png/revision/latest?cb=20200620201429",
+  "Arbalest":      "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/d/da/Arbalest_heroic.png/revision/latest/scale-to-width-down/1000?cb=20200620200256",
+  "Bounty Hunter": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/c/c3/Bounty_hunter_heroic.png/revision/latest/scale-to-width-down/1000?cb=20200620202402",
+  "Crusader":      "https://i.ibb.co/RpH4mJcp/Crus-heroic.png",
+  "Flagellant":    "https://i.ibb.co/HL5tSfgf/Flagellant-afflicted.png",
+  "Grave Robber":  "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/0/0c/Grave_robber_heroic.png/revision/latest?cb=20200620204458",
+  "Hellion":       "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/0/01/Hellion_heroic.png/revision/latest/scale-to-width-down/1000?cb=20200620210628",
+  "Highwayman":    "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/b/ba/Highw_heroic.png/revision/latest?cb=20200616154647",
+  "Houndmaster":   "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/d/d0/Houndmaster_heroic.png/revision/latest/scale-to-width-down/1000?cb=20200620212345",
+  "Jester":        "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/3/37/Jester_heroic.png/revision/latest?cb=20200620215207",
+  "Leper":         "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/1/1a/Leper_heroic.png/revision/latest?cb=20200620215838",
+  "Man-at-Arms":   "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/b/bd/Man_at_arms_heroic.png/revision/latest?cb=20200620221049",
+  "Musketeer":     "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/0/0f/Musketeer_heroic.png/revision/latest/scale-to-width-down/1000?cb=20200706195451",
+  "Occultist":     "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/5/55/Occultist_heroic.png/revision/latest/scale-to-width-down/1000?cb=20200616162729",
+  "Plague Doctor": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/1/1e/Plague_heroic.png/revision/latest?cb=20200616160456",
+  "Shieldbreaker": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/3/30/Shieldbreaker_heroic.png/revision/latest/scale-to-width-down/1000?cb=20200706201622",
+  "Vestal":        "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/a/af/Vest_heroic.png/revision/latest?cb=20200615162519"
+};
+
+const HERO_ICONS = {
+  "Abomination":   "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/0/03/Abomination_portrait_roster.png/revision/latest/scale-to-width-down/75?cb=20151202135708",
+  "Antiquarian":   "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/4/40/Antiquarian_portrait_roster.png/revision/latest/scale-to-width-down/75?cb=20160308234516",
+  "Arbalest":      "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/1/12/Arbalest_portrait_roster.png/revision/latest/scale-to-width-down/75?cb=20160212151554",
+  "Bounty Hunter": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/d/d4/Bounty_hunter_portrait_roster.png/revision/latest/scale-to-width-down/75?cb=20150717051741",
+  "Crusader":      "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/3/37/Crusader_portrait_roster.png/revision/latest/scale-to-width-down/75?cb=20150717051750",
+  "Flagellant":    "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/f/fc/Flagellant_portrait_roster.png/revision/latest?cb=20170621054337",
+  "Grave Robber":  "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/e/ea/Grave_robber_portrait_roster.png/revision/latest/scale-to-width-down/75?cb=20150717051801",
+  "Hellion":       "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/6/69/Hellion_portrait_roster.png/revision/latest/scale-to-width-down/75?cb=20150717052527",
+  "Highwayman":    "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/9/9e/Highwayman_portrait_roster.png/revision/latest/scale-to-width-down/75?cb=20150717052023",
+  "Houndmaster":   "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/1/13/Hound_master_portrait_roster.png/revision/latest/scale-to-width-down/75?cb=20150727043242",
+  "Jester":        "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/e/e2/Jester_portrait_roster.png/revision/latest/scale-to-width-down/75?cb=20150717053552",
+  "Leper":         "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/7/7d/Leper_portrait_roster.png/revision/latest/scale-to-width-down/75?cb=20150717052032",
+  "Man-at-Arms":   "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/f/fa/Man-at-arms_portrait_roster.png/revision/latest/scale-to-width-down/75?cb=20150727044118",
+  "Occultist":     "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/8/85/Occultist_portrait_roster.png/revision/latest/scale-to-width-down/75?cb=20150717052043",
+  "Plague Doctor": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/4/43/Plague_doctor_portrait_roster.png/revision/latest/scale-to-width-down/75?cb=20150717052050",
+  "Vestal":        "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/a/a5/Vestal_portrait_roster.png/revision/latest/scale-to-width-down/75?cb=20150717052058",
+  "Shieldbreaker": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/a/a6/Shieldbreaker_portrait_roster.png/revision/latest/scale-to-width-down/75?cb=20171030225748",
+  "Musketeer":     "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/3/38/Musketeer_portrait.png/revision/latest/scale-to-width-down/75?cb=20160603035859"
+};
+
+const HERO_STATS = {
+  "Abomination":   { hp: 37, dodge: 5, prot: 0,  acc: 0, crit: "6%", dmg: "9-17",  stun: "25%", moveResist: "25%", blight: "60%", bleed: "15%", debuff: "10%", deathblow: "75%", movement: "1 вперед, 2 назад", critBuff: "+20% к урону", religious: "Нет" },
+  "Antiquarian":   { hp: 29, dodge: 15, prot: 0,  acc: 0, crit: "5%", dmg: "6-11",  stun: "10%", moveResist: "20%", blight: "45%", bleed: "10%", debuff: "45%", deathblow: "75%", movement: "2 вперед, 2 назад", critBuff: "+10 к уклонению (2 раунда)", religious: "Нет" },
+  "Arbalest":      { hp: 38, dodge: 5, prot: 5,  acc: 0, crit: "10%", dmg: "8-14",  stun: "10%", moveResist: "50%", blight: "10%", bleed: "45%", debuff: "10%", deathblow: "75%", movement: "0 вперед, 2 назад", critBuff: "+33% урона по отмеченным целям (3 раунда)", religious: "Нет" },
+  "Bounty Hunter": { hp: 38, dodge: 10, prot: 0,  acc: 0, crit: "8%", dmg: "7-14",  stun: "50%", moveResist: "35%", blight: "10%", bleed: "35%", debuff: "10%", deathblow: "75%", movement: "2 вперед, 2 назад", critBuff: "+33% урона по отмеченным целям (3 раунда)", religious: "Нет" },
+  "Crusader":      { hp: 45, dodge: 5,  prot: 15, acc: 0, crit: "7%", dmg: "10-16",  stun: "20%", moveResist: "25%", blight: "10%", bleed: "70%", debuff: "10%", deathblow: "75%", movement: "1 вперед, 1 назад", critBuff: "+15% к защите (2 раунда)", religious: "Да"  },
+  "Flagellant":    { hp: 36, dodge: 0, prot: 0,  acc: 0, crit: "6%", dmg: "4-9",  stun: "55%", moveResist: "40%", blight: "15%", bleed: "5%", debuff: "25%", deathblow: "80%", movement: "3 вперед, 1 назад", critBuff: "+20% к шансу кровотечения", religious: "Да"  },
+  "Grave Robber":  { hp: 30, dodge: 20, prot: 0,  acc: 0, crit: "10%", dmg: "8-13",  stun: "5%", moveResist: "15%", blight: "60%", bleed: "25%", debuff: "25%", deathblow: "75%", movement: "2 вперед, 2 назад", critBuff: "+10 к уклонению (2 раунда)", religious: "Нет" },
+  "Hellion":       { hp: 39, dodge: 10, prot: 0,  acc: 0, crit: "9%", dmg: "8-17",  stun: "55%", moveResist: "15%", blight: "10%", bleed: "10%", debuff: "50%", deathblow: "75%", movement: "1 вперед, 0 назад", critBuff: "+33% урона по кровоточащим", religious: "Нет" },
+  "Highwayman":    { hp: 36, dodge: 15, prot: 0,  acc: 0, crit: "9%", dmg: "7-14",  stun: "20%", moveResist: "25%", blight: "30%", bleed: "30%", debuff: "30%", deathblow: "75%", movement: "2 вперед, 2 назад", critBuff: "+10 к точности (2 раунда)", religious: "Нет" },
+  "Houndmaster":   { hp: 31, dodge: 15, prot: 0,  acc: 0, crit: "8%", dmg: "6-12",  stun: "40%", moveResist: "25%", blight: "20%", bleed: "5%", debuff: "45%", deathblow: "75%", movement: "2 вперед, 2 назад", critBuff: "+20% к шансу кровотечения", religious: "Нет" },
+  "Jester":        { hp: 30, dodge: 25, prot: 0,  acc: 0, crit: "8%", dmg: "6-11",  stun: "5%", moveResist: "10%", blight: "30%", bleed: "25%", debuff: "55%", deathblow: "75%", movement: "3 вперед, 3 назад", critBuff: "+40% к эффективности снятия стресса", religious: "Нет" },
+  "Leper":         { hp: 33, dodge: 0,  prot: 10,  acc: 0, crit: "5%", dmg: "13-24", stun: "50%", moveResist: "60%", blight: "25%", bleed: "15%", debuff: "5%", deathblow: "75%", movement: "1 вперед, 0 назад", critBuff: "+10 к точности", religious: "Да"  },
+  "Man-at-Arms":   { hp: 43, dodge: 5, prot: 10, acc: 0, crit: "6%", dmg: "6-13",  stun: "70%", moveResist: "25%", blight: "5%", bleed: "35%", debuff: "10%", deathblow: "75%", movement: "2 вперед, 2 назад", critBuff: "-33% стресса", religious: "Нет" },
+  "Musketeer":     { hp: 39, dodge: 5, prot: 0,  acc: 0, crit: "10%", dmg: "8-14",  stun: "10%", moveResist: "50%", blight: "20%", bleed: "35%", debuff: "10%", deathblow: "75%", movement: "0 вперед, 2 назад", critBuff: "+33% урона по отмеченным целям", religious: "Нет" },
+  "Occultist":     { hp: 29, dodge: 15, prot: 0,  acc: 0, crit: "10%", dmg: "6-11",  stun: "10%", moveResist: "5%", blight: "30%", bleed: "15%", debuff: "70%", deathblow: "75%", movement: "2 вперед, 2 назад", critBuff: "+25% к целительным навыкам", religious: "Нет" },
+  "Plague Doctor": { hp: 31, dodge: 5, prot: 0,  acc: 0, crit: "6%", dmg: "6-11",  stun: "20%", moveResist: "5%", blight: "70%", bleed: "10%", debuff: "35%", deathblow: "75%", movement: "1 вперед, 1 назад", critBuff: "+20% к шансу отравления", religious: "Нет" },
+  "Shieldbreaker": { hp: 30, dodge: 20, prot: 0,  acc: 0, crit: "10%", dmg: "8-15",  stun: "10%", moveResist: "35%", blight: "10%", bleed: "35%", debuff: "30%", deathblow: "75%", movement: "2 вперед, 2 назад", critBuff: "+15% к защите", religious: "Нет" },
+  "Vestal":        { hp: 37, dodge: 5, prot: 0,  acc: 0, crit: "5%", dmg: "7-12",  stun: "25%", moveResist: "20%", blight: "40%", bleed: "40%", debuff: "10%", deathblow: "75%", movement: "1 вперед, 1 назад", critBuff: "+25% к эффективности целительных навыков", religious: "Да"  }
+};
+
+const ABILITIES = {
+  "Abomination":   ["Manacles", "Beast's Bile", "Absolution", "Rake", "Rage", "Slam"],
+  "Antiquarian":   ["Nervous Stab", "Festering Vapours", "Take Cover", "Flashpowder", "Rejuvenating Vapours", "Invigorating Vapours", "Protect Me"],
+  "Arbalest":      ["Sniper Shot", "Suppressing Fire", "Sniper's Mark", "Bola", "Blindfire", "Battlefield Bandage", "Illuminating Flare"],
+  "Bounty Hunter": ["Collect Bounty", "Mark for Death", "Come Hither!", "Uppercut", "Flashbang", "Finish Him", "Caltrops"],
+  "Crusader":      ["Smite", "Zealous Accusation", "Stunning Blow", "Bulwark of Light", "Rally to the Flame", "Holy Lance", "Inspiring Cry"],
+  "Flagellant":    ["Punish", "Rain of Sorrows", "Exsanguinate", "Reclaim", "Redeem", "Endure",  "Suffer"],
+  "Grave Robber":  ["Pick to the Face", "Lunge", "Flashing Daggers", "Shadow Fade", "Thrown Dagger", "Panic Darts", "Toxin Trickery"],
+  "Hellion":       ["Wicked Hack", "Iron Swan", "Terrifying YAWP!", "If It Bleeds", "Breakthrough", "Adrenaline Rush", "Bleed Out"],
+  "Highwayman":    ["Wicked Slice", "Pistol Shot", "Point Blank Shot", "Grapeshot Blast", "Vendetta", "Duelist's Advance", "Open Vein"],
+  "Houndmaster":   ["Hound's Rush", "Hound's Harry", "Target Whistle", "Cry Havoc", "Guard Dog", "Lick Wounds", "Blackjack"],
+  "Jester":        ["Dirk Stab", "Harvest", "Finale", "Solo", "Mortal Wound", "Battle Ballad", "Inspiring Tune"],
+  "Leper":         ["Chop", "Hew", "Purge", "Revenge", "Withstand", "Solemnity", "Intimidate"],
+  "Man-at-Arms":   ["Crush", "Rampart", "Bellow", "Defender", "Retribution", "Command", "Bolster"],
+  "Occultist":     ["Sacrificial Stab", "Abyssal Artillery", "Weakening Curse", "Wyrd Reconstruction", "Vulnerability Hex", "Stygian Embrace", "Daemon's Pull"],
+  "Plague Doctor": ["Noxious Blast", "Plague Grenade", "Blinding Gas", "Incision", "Battlefield Medicine", "Emboldening Vapours", "Disorienting Blast"],
+  "Vestal":        ["Mace Bash", "Judgement", "Dazzling Light", "Divine Grace", "Divine Comfort", "Illumination", "Hand of Light"],
+  "Shieldbreaker": ["Pierce", "Puncture", "Adder's Kiss", "Impale", "Expose", "Captivate", "Serpent Sway"],
+  "Musketeer":     ["Aimed Shot", "Smokescreen", "Call the Shot", "Buckshot", "Quickdraw", "Patch Up", "Ranging Shot"]
+};
+
+const ABILITY_ICONS = {
+  "Abomination": {
+    "Manacles": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/0/00/Manacles.png/revision/latest?cb=20151202134328",
+    "Beast's Bile": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/3/3f/Beast%27s_Bile.png/revision/latest?cb=20151202134335%27s_Bile.png",
+    "Absolution": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/8/81/Absolution.png/revision/latest?cb=20151202134341",
+    "Rake": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/b/bd/Rake.png/revision/latest?cb=20151202134348",
+    "Rage": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/2/27/Rage.png/revision/latest?cb=20151202134356",
+    "Slam": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/2/2e/Slam.png/revision/latest?cb=20151202134403"
+  },
+  "Antiquarian": {
+    "Nervous Stab": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/0/0b/Nervous_Stab.png/revision/latest?cb=20160308233525",
+    "Festering Vapours": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/3/36/Festering_Vapours.png/revision/latest?cb=20160308233543",
+    "Flashpowder": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/4/47/Flashpowder.png/revision/latest?cb=20160308233613",
+    "Protect Me": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/b/bf/Protect_Me.png/revision/latest?cb=20160308233646",
+    "Invigorating Vapours": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/3/3c/Invigorating_Vapours.png/revision/latest?cb=20160308233637",
+    "Rejuvenating Vapours": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/6/6b/Fortifying_Vapours.png/revision/latest?cb=20160308233627",
+    "Take Cover": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/1/19/Get_Down.png/revision/latest?cb=20160308233603"
+  },
+  "Arbalest": {
+    "Sniper Shot": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/5/5b/Sniper_Shot.png/revision/latest?cb=20160119231754",
+    "Suppressing Fire": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/7/78/Suppressing_Fire.png/revision/latest?cb=20160119231826",
+    "Sniper's Mark": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/7/70/Sniper%27s_Mark.png/revision/latest?cb=20160119231834",
+    "Bola": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/a/ae/Bola.png/revision/latest?cb=20160119231843",
+    "Illuminating Flare": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/0/0f/Rallying_Flare.png/revision/latest?cb=20160119231928",
+    "Blindfire": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/b/b9/Blindfire.png/revision/latest?cb=20160119231858",
+    "Battlefield Bandage": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/8/8c/Battlefield_Bandage.png/revision/latest?cb=20160119231917"
+  },
+  "Bounty Hunter": {
+    "Collect Bounty": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/9/95/Collect_Bounty.png/revision/latest?cb=20160119232053",
+    "Mark for Death": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/e/ea/Mark_for_Death.png/revision/latest?cb=20160119232101",
+    "Uppercut": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/2/27/Uppercut.png/revision/latest?cb=20160119232117",
+    "Come Hither!": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/4/44/Come_Hither.png/revision/latest?cb=20160119232108",
+    "Flashbang": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/8/86/Flashbang.png/revision/latest?cb=20160119232124",
+    "Finish Him": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/e/e2/Finish_Him.png/revision/latest?cb=20160119232132",
+    "Caltrops": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/3/31/Caltrops.png/revision/latest?cb=20170626184114"
+  },
+  "Crusader": {
+    "Smite": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/0/05/Smite.png/revision/latest?cb=20150208084118",
+    "Stunning Blow": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/4/45/Stunning_Blow.png/revision/latest?cb=20150208084155",
+    "Holy Lance": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/8/8a/Holy_Lance.png/revision/latest?cb=20230803094333",
+    "Bulwark of Light": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/d/da/Bulwark_of_Faith.png/revision/latest?cb=20150208084205",
+    "Rally to the Flame": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/9/9a/Battle_Heal.png/revision/latest?cb=20150208083710",
+    "Inspiring Cry": "static.wikia.nocookie.net/darkestdungeon_gamepedia/images/4/4a/Inspiring_Cry.png/revision/latest?cb=20150208083704",
+    "Zealous Accusation": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/3/39/Zealous_Accusation.png/revision/latest?cb=20150208083639"
+  },
+  "Flagellant": {
+    "Punish": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/2/21/Flagellant.ability.one.png/revision/latest?cb=20170619205224",
+    "Rain of Sorrows": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/7/73/Flagellant.ability.two.png/revision/latest?cb=20170619205423",
+    "Exsanguinate": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/9/9a/Flagellant.ability.three.png/revision/latest?cb=20170619205457",
+    "Redeem": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/5/5d/Flagellant.ability.five.png/revision/latest?cb=20170619205551",
+    "Endure": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/f/f3/Flagellant.ability.six.png/revision/latest?cb=20170619205655",
+    "Reclaim": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/6/60/Flagellant.ability.four.png/revision/latest?cb=20170619205523",
+    "Suffer": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/f/f2/Flagellant.ability.seven.png/revision/latest?cb=20170619205714"
+  },
+  "Grave Robber": {
+    "Pick to the Face": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/8/8b/Pick_to_the_Face.png/revision/latest?cb=20160119232417",
+    "Lunge": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/7/79/Lunge.png/revision/latest?cb=20160119232425",
+    "Shadow Fade": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/7/7d/Shadow_Fade.png/revision/latest?cb=20160119232441",
+    "Panic Darts": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/b/b8/Poison_Dart.png/revision/latest?cb=20160119232456",
+    "Toxin Trickery": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/9/91/Toxin_Trickery.png/revision/latest?cb=20160119232504",
+    "Thrown Dagger": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/a/a7/Thrown_Dagger.png/revision/latest?cb=20160119232449",
+    "Flashing Daggers": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/2/26/Flashing_Daggers.png/revision/latest?cb=20160119232434"
+  },
+  "Hellion": {
+    "Wicked Hack": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/8/85/Wicked_Hack.png/revision/latest?cb=20150208084522",
+    "Iron Swan": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/9/9c/Iron_Swan.png/revision/latest?cb=20150208084515",
+    "If It Bleeds": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/a/a9/If_It_Bleeds.png/revision/latest?cb=20150208084550",
+    "Terrifying YAWP!": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/6/6e/Barbaric_Yawp.png/revision/latest?cb=20150208084538",
+    "Breakthrough": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/6/67/Breakthrough.png/revision/latest?cb=20150208084603",
+    "Adrenaline Rush": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/a/a3/Adrenaline_Rush.png/revision/latest?cb=20150208084614",
+    "Bleed Out": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/1/19/Bleed_Out.png/revision/latest?cb=20150208084623"
+  },
+  "Highwayman": {
+    "Wicked Slice": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/4/4b/Wicked_Slice.png/revision/latest?cb=20150218021838",
+    "Pistol Shot": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/9/97/Pistol_Shot.png/revision/latest?cb=20150203052027",
+    "Point Blank Shot": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/8/82/Point_Blank_Shot.png/revision/latest?cb=20150207182735",
+    "Grapeshot Blast": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/0/09/Grapeshot_Blast.png/revision/latest?cb=20150203051559",
+    "Vendetta": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/6/66/Tracking_Shot.png/revision/latest?cb=20150207182617",
+    "Duelist's Advance": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/b/b5/Duelist%27s_Advance.png/revision/latest?cb=20150207182707",
+    "Open Vein": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/2/2e/Open_Vein.png/revision/latest?cb=20160123113241"
+  },
+  "Houndmaster": {
+    "Hound's Rush": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/e/eb/Hound%27s_Rush.png/revision/latest?cb=20230803094714",
+    "Hound's Harry": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/e/ed/Hound%27s_Harry.png/revision/latest?cb=20150723200114",
+    "Target Whistle": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/1/18/Whistle.png/revision/latest?cb=20160119232711",
+    "Cry Havoc": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/f/f2/Cry_Havoc.png/revision/latest?cb=20150724093117",
+    "Lick Wounds": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/6/69/Lick_Wounds.png/revision/latest?cb=20150724095402",
+    "Blackjack": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/8/86/Blackjack.png/revision/latest?cb=20150724103700",
+    "Guard Dog": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/5/5d/Guard_Dog.png/revision/latest?cb=20150724094725"
+  },
+  "Jester": {
+    "Dirk Stab": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/4/40/Dirk_Stab.png/revision/latest?cb=20230920005035",
+    "Finale": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/5/59/Finale.png/revision/latest?cb=20230920005219",
+    "Solo": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/1/10/Solo.png/revision/latest?cb=20150208084707",
+    "Mortal Wound": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/0/09/Slice_Off.png/revision/latest?cb=20150208084735",
+    "Battle Ballad": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/6/64/Battle_Ballad.png/revision/latest?cb=20150208084744",
+    "Inspiring Tune": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/a/af/Inspiring_Tune.png/revision/latest?cb=20230920005409",
+    "Harvest": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/4/4d/Harvest.png/revision/latest?cb=20230920005121"
+  },
+  "Leper": {
+    "Chop": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/e/e3/Chop.png/revision/latest?cb=20150205112326",
+    "Hew": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/d/de/Hew.png/revision/latest?cb=20150205112338",
+    "Intimidate": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/7/72/Intimidate.png/revision/latest?cb=20150205112126",
+    "Purge": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/a/aa/Purge.png/revision/latest?cb=20150205112349",
+    "Solemnity": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/3/3f/Solemnity.png/revision/latest?cb=20150205112422",
+    "Revenge": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/5/5f/Revenge.png/revision/latest?cb=20150205112408",
+    "Withstand": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/a/a5/Withstand.png/revision/latest?cb=20150205112436"
+  },
+  "Man-at-Arms": {
+    "Crush": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/1/15/Crush.png/revision/latest?cb=20160218151818",
+    "Rampart": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/f/f2/Rampart.png/revision/latest?cb=20160227032209",
+    "Bellow": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/8/82/Bellow.png/revision/latest?cb=20160227032308",
+    "Defender": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/0/0d/Defender.png/revision/latest?cb=20160227032356",
+    "Retribution": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/f/fb/Retribution.png/revision/latest?cb=20160227032441",
+    "Command": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/9/94/Command.png/revision/latest?cb=20160227032535",
+    "Bolster": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/e/ef/Bolster.png/revision/latest?cb=20160218151558"
+  },
+  "Occultist": {
+    "Sacrificial Stab": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/4/4c/Sacrificial_Stab.png/revision/latest?cb=20181125041025",
+    "Abyssal Artillery": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/d/de/Abyssal_Artillery.png/revision/latest?cb=20150203222654",
+    "Weakening Curse": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/0/0e/Weakening_Curse.png/revision/latest?cb=20150203222648",
+    "Wyrd Reconstruction": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/3/3a/Wyrd_Reconstruction.png/revision/latest?cb=20150203222625",
+    "Vulnerability Hex": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/b/b4/Vulnerability_Hex.png/revision/latest?cb=20150203222619",
+    "Stygian Embrace": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/f/f0/Hands_from_the_Abyss.png/revision/latest?cb=20150203222642",
+    "Daemon's Pull": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/7/7f/Daemon%27s_Pull.png/revision/latest?cb=20150203222637"
+  },
+  "Plague Doctor": {
+    "Noxious Blast": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/5/54/Noxious_Blast.png/revision/latest?cb=20150208193543",
+    "Plague Grenade": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/d/db/Plague_Grenade.png/revision/latest?cb=20150208193559",
+    "Blinding Gas": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/6/6e/Blinding_Gas.png/revision/latest?cb=20150208193617",
+    "Battlefield Medicine": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/e/eb/Battlefield_Medicine.png/revision/latest?cb=20150208193641",
+    "Incision": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/d/d5/Incision.png/revision/latest?cb=20150208193626",
+    "Emboldening Vapours": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/7/7a/Emboldening_Vapours.png/revision/latest?cb=20150208193649",
+    "Disorienting Blast": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/4/49/Disorienting_Blast.png/revision/latest?cb=20160119232842"
+  },
+  "Vestal": {
+    "Judgement": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/b/b0/Judgement.png/revision/latest?cb=20150203192800",
+    "Mace Bash": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/f/fe/Mace_Bash.png/revision/latest?cb=20150203212504",
+    "Hand of Light": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/2/2e/Hand_of_Light.png/revision/latest?cb=20150203215110",
+    "Dazzling Light": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/e/e4/Dazzling_Light.png/revision/latest?cb=20150203195148",
+    "Divine Grace": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/a/a1/Divine_Grace.png/revision/latest?cb=20150203192436",
+    "Divine Comfort": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/a/af/Divine_Comfort.png/revision/latest?cb=20150203215104",
+    "Illumination": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/c/cd/Illumination.png/revision/latest?cb=20150203215116"
+  },
+  "Shieldbreaker": {
+    "Pierce": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/d/dc/Shieldbreaker.ability.one.png/revision/latest?cb=20171030202258",
+    "Puncture": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/0/0a/Shieldbreaker.ability.two.png/revision/latest?cb=20171030202434",
+    "Captivate": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/0/01/Shieldbreaker.ability.six.png/revision/latest?cb=20171030202338",
+    "Impale": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/0/02/Shieldbreaker.ability.four.png/revision/latest?cb=20171030202242",
+    "Adder's Kiss": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/e/ea/Shieldbreaker.ability.three.png/revision/latest?cb=20171030202403",
+    "Serpent Sway": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/2/2a/Shieldbreaker.ability.seven.png/revision/latest?cb=20171030202316",
+    "Expose": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/e/e9/Shieldbreaker.ability.five.png/revision/latest?cb=20171030202110"
+  },
+  "Musketeer": {
+    "Aimed Shot": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/8/86/Aimed_Shot.png/revision/latest?cb=20160313033818",
+    "Smokescreen": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/7/74/Smokescreen.png/revision/latest?cb=20160313033919",
+    "Call the Shot": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/7/70/Sniper%27s_Mark.png/revision/latest?cb=20160119231834",
+    "Buckshot": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/c/c2/Buckshot.png/revision/latest?cb=20160313034104",
+    "Quickdraw": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/6/67/Sidearm.png/revision/latest?cb=20160313034149",
+    "Ranging Shot": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/f/fa/Skeet_Shot.png/revision/latest?cb=20160313034257",
+    "Patch Up": "https://static.wikia.nocookie.net/darkestdungeon_gamepedia/images/8/8c/Battlefield_Bandage.png/revision/latest?cb=20160119231917"
+  }
+};
+
+const EFFECTS = {
+  bleed:     { label: "Кровотечение",     color: "#c41c1c", url: "https://i.ibb.co/7xYzwKNh/Poptext-bleed.webp" },
+  blight:    { label: "Яд",    color: "#6aa84f", url: "https://i.ibb.co/bRCdXRtn/Poptext-poison.webp" },
+  stun:      { label: "Оглушение",      color: "#f1c40f", url: "https://i.ibb.co/qYL9Ckct/Poptext-stun.webp" },
+  forward:   { label: "Передвижение",   color: "#5b8bd9", url: "https://i.ibb.co/ksyVM2MZ/Poptext-move.webp" },
+  back:      { label: "Передвижение",      color: "#5b8bd9", url: "https://i.ibb.co/ksyVM2MZ/Poptext-move.webp" },
+  buff:      { label: "Усиление",      color: "#d4af37", url: "https://i.ibb.co/SDPnd0sW/Poptext-buff.webp" },
+  debuff:    { label: "Ослабление",    color: "#b05a5a", url: "https://i.ibb.co/Pz4yQdLZ/Poptext-debuff.webp" },
+  stress:    { label: "Стресс",    color: "#9b59b6", url: "https://i.ibb.co/mxPg2t9/skill-attribute-stress.png" },
+  guard:     { label: "Оборона",     color: "#95a5a6", url: "https://i.ibb.co/gbGK3VnJ/Poptext-guard.webp" },
+  riposte:   { label: "Контратака",   color: "#e67e22", url: "https://i.ibb.co/0yZzdrW5/Poptext-riposte.webp" },
+  mark:      { label: "Метка",      color: "#e67e22", url: "https://i.ibb.co/yTm6jqQ/Poptext-tagged.webp" },
+  heal:      { label: "Лечение",      color: "#2ecc71", url: "https://i.ibb.co/1ftBXj2j/skill-attribute-heal.png" },
+  deathblow: { label: "Смертельный удар", color: "#d32f2f", url: "https://i.ibb.co/XrmkrjJK/Deathsdoor.webp" },
+  stealth:   { label: "Невидимость",    color: "#3b82f6", url: "https://i.ibb.co/vvKvCrK8/Tray-stealth.webp" },
+  unstress:  { label: "Снижение стресса",   color: "#ffffff", url: "https://i.ibb.co/C5P9rH5d/town-event-icon-roster.png" },
+  daze:      { label: "Ошеломление",       color: "#e8b923", url: "https://i.ibb.co/YFMQtDKp/Poptext-daze.webp" },
+  block:     { label: "Блок", color: "#7ea6c9", url: "https://i.ibb.co/DDvqHvzj/Poptext-health-damage-block.webp" },
+  unguard:   { label: "Невозможность обороны", color: "#e67e22", url: "https://i.ibb.co/3YBRTtrK/unguard.webp" },
+  regen:   { label: "Регенерация", color: "#2ecc71", url: "https://i.ibb.co/LzgM9QWd/regen.webp" },
+  horror:    { label: "Ужас", color: "#9b59b6", url: "https://i.ibb.co/93dngfRx/Poptext-horror.webp" }
+};
+
+// ===== ОПИСАНИЕ СПОСОБНОСТЕЙ =====
+const ABILITY_DESCRIPTIONS = {
+  "Abomination": {
+    "Rake": { desc: "Рваная рана", range: "Ближний", rank: "○○◉◉", target: "◉-◉○○", damage: "-50%", accuracy: "100", crit: "1%", effect: [], self: [{ type: "buff", value: "+25% урона к способности Рваная рана (4 раунда)"}] },
+    "Slam": { desc: "Удар", range: "Ближний", rank: "○◉◉◉", target: "◉◉○○", damage: "-25%", accuracy: "100", crit: "5%", effect: [{ type: "back", value: "отбрасывание врага на 2 позиции (100% база)," }, { type: "guard", value: "действует сквозь оборону."}, { type: "unguard", value: "Цель не может быть под обороной 2 раунда (500% база)" }], self: [{ type: "forward", value: "движение вперед на 1 позицию"}] },
+    "Rage": { desc: "Ярость", range: "Ближний", rank: "○○◉◉", target: "◉◉◉○", damage: "+0%", accuracy: "90", crit: "11.5%", effect: [], self: [] },
+    "Beast's Bile": { desc: "Звериная желчь", range: "Дальний", rank: "○◉◉○", target: "○◉-◉○", damage: "-90%", accuracy: "95", crit: "6%", effect: [{ type: "blight", value: "3 урона/раунд на 3 раунда (100% база)"}, { type: "stress", value: "+12" }], self: [{ type: "riposte", value: "активация парирования на 2 раунда" }] },
+    "Absolution": { desc: "Отпущение. Максимум 2 использования в бою!", range: "Поддержка", rank: "◉◉◉◉", target: "На себя", damage: "—", accuracy: "—", crit: "—", effect: [{ type: "heal", value: "13" }, { type: "stress", value: "-25" }], self: [] },
+    "Manacles": { desc: "Путы", range: "Дальний", rank: "○◉◉◉", target: "◉◉◉○", damage: "-60%", accuracy: "110", crit: "5%", effect: [{ type: "stun", value: "100% база" }], self: [] }
+  },
+  "Antiquarian": {
+    "Nervous Stab": { desc: "Робкий выпад", range: "Ближний", rank: "◉◉◉◉", target: "◉◉◉○", damage: "+0%", accuracy: "90", crit: "7%", effect: [], self: [] },
+    "Festering Vapours": { desc: "Едкие испарения", range: "Дальний", rank: "◉-◉-◉-◉", target: "◉-◉-◉-◉", damage: "-80%", accuracy: "90", crit: "4%", effect: [{ type: "blight", value: "2 урона/раунд на 3 раунда (100% база)" }, { type: "stress", value: "+8" }], self: [] },
+    "Flashpowder": { desc: "Слепящий порошок", range: "Дальний", rank: "◉◉◉◉", target: "◉◉◉◉", damage: "-100%", accuracy: "110", crit: "—", effect: [{ type: "debuff", value: "-15 к точности" }, { type: "stealth", value: "игнорирование/снятие невидимости" }, { type: "stress", value: "+20" }], self: [] },
+    "Protect Me": { desc: "Защити меня. Максимум 3 использования в бою!", range: "Поддержка", rank: "◉◉◉◉", target: "◉◉◉◉", damage: "—", accuracy: "—", crit: "—", effect: [{ type: "guard", value: "активирует оборону" }], self: [{ type: "buff", value: "+10 к уклонению, +20% к защите" }] },
+    "Invigorating Vapours": { desc: "Бодрящие благовония", range: "Поддержка", rank: "◉◉○○", target: "◉-◉-◉-◉", damage: "—", accuracy: "—", crit: "—", effect: [{ type: "buff", value: "+10 к уклонению" }], self: [] },
+    "Rejuvenating Vapours": { desc: "Омолаживающие испарения", range: "Поддержка", rank: "◉◉○○", target: "◉-◉-◉-◉", damage: "—", accuracy: "—", crit: "—", effect: [{ type: "regen", value: "3 здоровья/раунд (на 3 раунда)" }], self: [] },
+    "Take Cover": { desc: "Поиск укрытия! Максимум 3 использования в бою!", range: "Поддержка", rank: "◉◉◉◉", target: "На себя", damage: "—", accuracy: "—", crit: "—", effect: [], self: [{ type: "back", value: "перемещение назад на 2 позиции" }, { type: "stealth", value: "невидимость на 2 раунда" }, { type: "deathblow", value: "+20% к сопротивлению от смертельного удара" }] }
+  },
+  "Arbalest": {
+    "Sniper Shot": { desc: "Снайперский выстрел", range: "Дальний", rank: "◉◉○○", target: "○◉◉◉", damage: "+25%", accuracy: "110", crit: "9%", effect: [{ type: "mark", value: "+50% урона, +13% шанса крита, +30% шанса смерт. удара по отмеченным" }], self: [] },
+    "Suppressing Fire": { desc: "Подавляющий огонь", range: "Дальний", rank: "◉◉○○", target: "○○◉-◉", damage: "-80%", accuracy: "110", crit: "-6%", effect: [{ type: "stress", value: "+12" }, { type: "debuff", value: "+25% к получаемому стрессу" }], self: [] },
+    "Sniper's Mark": { desc: "Метка снайпера", range: "Дальний", rank: "◉◉○○", target: "○◉◉◉", damage: "-100%", accuracy: "130", crit: "—", effect: [{ type: "mark", value: "метка на 3 раунда" }, { type: "debuff", value: "-30 к уклонению" }], self: [] },
+    "Bola": { desc: "Бола", range: "Дальний", rank: "○◉◉◉", target: "◉-◉○○", damage: "-50%", accuracy: "110", crit: "6%", effect: [{ type: "back", value: "отбрасывание на 1 позицию (85% база)" }], self: [{ type: "back", value: "перемещение назад на 1 позицию" }] },
+    "Illuminating Flare": { desc: "Яркая вспышка", range: "Поддержка", rank: "◉◉◉◉", target: "◉-◉-◉-◉", damage: "-100", accuracy: "110", crit: "—", effect: [{ type: "stealth", value: "снимает невидимость" }, { type: "stun", value: "снимает оглушение" }, { type: "daze", value: "снимает ошеломление" }, { type: "mark", value: "снимает метку" }, { type: "debuff", value: "снимает ослабления" }], self: [] },
+    "Blindfire": { desc: "Огонь в слепую", range: "Дальний", rank: "◉◉◉◉", target: "◉◉◉◉", damage: "-10%", accuracy: "80", crit: "4%", effect: [{ type: "stealth", value: "стреляет сквозь невидимость" }], self: [] },
+    "Battlefield Bandage": { desc: "Боевая перевязка", range: "Поддержка", rank: "◉◉○○", target: "◉◉◉◉", damage: "—", accuracy: "—", crit: "—", effect: [{ type: "heal", value: "+7-9" }, { type: "bleed", value: "снимает кровотечение" }], self: [] }
+  },
+  "Bounty Hunter": {
+    "Collect Bounty": { desc: "Вознаграждение", range: "Ближний", rank: "○◉◉◉", target: "◉◉○○", damage: "+0%", accuracy: "90", crit: "11%", effect: [{ type: "mark", value: "+90% урона по отмеченным целям" }], self: [] },
+    "Mark for Death": { desc: "Смертная метка", range: "Дальний", rank: "◉◉◉◉", target: "◉◉◉◉", damage: "-100%", accuracy: "130", crit: "—", effect: [{ type: "mark", value: "метка на 4 раунда" }, { type: "deathblow", value: "-30% сопротивления смерт. удару" }], self: [] },
+    "Uppercut": { desc: "Апперкот", range: "Ближний", rank: "○○◉◉", target: "◉◉○○", damage: "-67%", accuracy: "110", crit: "4%", effect: [{ type: "back", value: "отбрасывание на 2 позиции (100% база)" }, { type: "daze", value: "1 раунд" }], self: [] },
+    "Come Hither!": { desc: "Иди сюда!", range: "Дальний", rank: "◉◉◉◉", target: "○○◉◉", damage: "-80%", accuracy: "120", crit: "4%", effect: [{ type: "mark", value: "метка на 2 раунда" }, { type: "back", value: "притягивает на 2 позиции" }], self: [] },
+    "Flashbang": { desc: "Светошумовая граната", range: "Дальний", rank: "◉◉◉○", target: "○◉◉◉", damage: "-100%", accuracy: "110", crit: "—", effect: [{ type: "back", value: "меняет местами с соседом" }, { type: "debuff", value: "-25 к уклонению" }], self: [] },
+    "Finish Him": { desc: "Добивание", range: "Ближний", rank: "○◉◉◉", target: "◉◉◉○", damage: "+0%", accuracy: "90", crit: "9%", effect: [{ type: "stun", value: "+60% урона по оглушенному" }, { type: "daze", value: "+30% урона по ошеломленному" }, { type: "deathblow", value: "+50% к смерт. удару" }], self: [] },
+    "Caltrops": { desc: "Шипы. Максимум 1 использование за бой!", range: "Дальний", rank: "◉◉◉○", target: "◉-◉-◉-◉", damage: "-90%", accuracy: "200", crit: "9%", effect: [{ type: "bleed", value: "2 урона/раунд на 25 раундов" }, { type: "stress", value: "+5% к получаемому стрессу" }], self: [] }
+  },
+  "Crusader": {
+    "Smite": { desc: "Сокрушение", range: "Ближний", rank: "○○◉◉", target: "◉◉○○", damage: "+0%", accuracy: "90", crit: "8%", effect: [], self: [] },
+    "Stunning Blow": { desc: "Оглушающий удар", range: "Дальний", rank: "○○◉◉", target: "◉◉○○", damage: "-50%", accuracy: "100", crit: "4%", effect: [{ type: "stun", value: "100% база" }], self: [] },
+    "Holy Lance": { desc: "Святое копьё", range: "Ближний", rank: "◉◉○○", target: "○◉◉◉", damage: "+0%", accuracy: "90", crit: "10.5%", effect: [], self: [{ type: "forward", value: "движение вперед на 1 позицию" }] },
+    "Bulwark of Light": { desc: "Алтарь света. Максимум 1 использование за бой!", range: "Поддержка", rank: "○○◉◉", target: "На себя", damage: "—", accuracy: "—", crit: "—", effect: [{ type: "buff", value: "+20% к защите отряда на весь бой" }], self: [] },
+    "Rally to the Flame": { desc: "Гонка за пламенем", range: "Поддержка", rank: "◉◉◉◉", target: "◉◉◉◉", damage: "—", accuracy: "—", crit: "—", effect: [{ type: "heal", value: "4" }, { type: "debuff", value: "снимает ослабления" }], self: [] },
+    "Inspiring Cry": { desc: "Воодушевление", range: "Поддержка", rank: "◉◉◉◉", target: "◉◉◉◉", damage: "—", accuracy: "—", crit: "—", effect: [{ type: "stress", value: "-25, снимает ужас" }], self: [] },
+    "Zealous Accusation": { desc: "Яросное обвинение", range: "Дальний", rank: "○○◉◉", target: "◉-◉○○", damage: "-30%", accuracy: "90", crit: "0%", effect: [{ type: "stress", value: "+20" }], self: [] }
+  },
+  "Flagellant": {
+    "Punish": { desc: "Наказание", range: "Ближний", rank: "○○◉◉", target: "◉◉○○", damage: "+0%", accuracy: "100", crit: "9%", effect: [{ type: "bleed", value: "6 урона/раунд на 3 раунда" }, { type: "stress", value: "+12" }], self: [] },
+    "Rain of Sorrows": { desc: "Дождь из слёз", range: "Ближний", rank: "○○◉◉", target: "○○◉-◉", damage: "-67%", accuracy: "95", crit: "6%", effect: [{ type: "bleed", value: "4 урона/раунд на 3 раунда" }, { type: "stress", value: "+12" }], self: [] },
+    "Exsanguinate": { desc: "Кровопускание. Максимум 3 (при HP < 40%)!", range: "Ближний", rank: "○○◉◉", target: "◉◉○○", damage: "+0%", accuracy: "85", crit: "7%", effect: [{ type: "bleed", value: "9 урона/раунд на 3 раунда" }], self: [{ type: "heal", value: "50% HP" }, { type: "debuff", value: "-50% лечения" }, { type: "daze", value: "1 раунд" }] },
+    "Redeem": { desc: "Искупление. Максимум 2 (при HP < 40%)!", range: "Поддержка", rank: "◉◉◉◉", target: "◉◉◉◉", damage: "—", accuracy: "—", crit: "—", effect: [{ type: "heal", value: "43% HP" }], self: [{ type: "heal", value: "50% HP" }, { type: "debuff", value: "-50% лечения" }, { type: "daze", value: "1 раунд" }] },
+    "Endure": { desc: "Терпение", range: "Поддержка", rank: "◉◉◉◉", target: "◉◉◉◉", damage: "—", accuracy: "—", crit: "—", effect: [{ type: "stress", value: "-30" }], self: [{ type: "stress", value: "+20" }] },
+    "Reclaim": { desc: "Возвращение", range: "Поддержка", rank: "◉◉◉◉", target: "◉◉◉◉", damage: "—", accuracy: "—", crit: "—", effect: [{ type: "regen", value: "6 здоровья/раунд на 3 раунда" }], self: [{ type: "bleed", value: "5 урона/раунд на 3 раунда" }] },
+    "Suffer": { desc: "Страдание", range: "Поддержка", rank: "◉◉◉◉", target: "◉◉◉◉", damage: "—", accuracy: "—", crit: "—", effect: [{ type: "mark", value: "снимает метку" }, { type: "blight", value: "снимает яд" }, { type: "bleed", value: "снимает кровотечение" }], self: [{ type: "mark", value: "на себя (2 раунда)" }, { type: "blight", value: "на себя" }, { type: "bleed", value: "на себя" }, { type: "stress", value: "-40% (4 раунда)" }, { type: "deathblow", value: "+10% сопротивления (4 раунда)" }] }
+  },
+  "Grave Robber": {
+    "Pick to the Face": { desc: "Киркой в лицо", range: "Ближний", rank: "○◉◉◉", target: "◉◉○○", damage: "+0%", accuracy: "100", crit: "5%", effect: [], self: [{ type: "buff", value: "Игнорирует показатель защиты цели во время атаки этой способностью" }] },
+    "Lunge": { desc: "Выпад", range: "Ближний", rank: "◉◉○○", target: "◉◉◉○", damage: "+40%", accuracy: "110", crit: "12%", effect: [{ type: "deathblow", value: "+20% шанса смерт. удара" }], self: [{ type: "forward", value: "перемещение вперед на 2 позиции" }] },
+    "Shadow Fade": { desc: "Уход в тень. Максимум 3 использования за бой!", range: "Поддержка", rank: "○○◉◉", target: "На себя", damage: "—", accuracy: "—", crit: "—", effect: [], self: [{ type: "back", value: "отскок назад на 2 позиции" }, { type: "stealth", value: "невидимость +100% урона из невидимости (2 раунда)" }] },
+    "Panic Darts": { desc: "Дротики ужаса", range: "Дальний", rank: "◉◉◉○", target: "◉◉◉◉", damage: "-60%", accuracy: "95", crit: "11.5%", effect: [{ type: "blight", value: "4 урона/раунд на 4 раунда" }, { type: "stress", value: "+30" }], self: [] },
+    "Toxin Trickery": { desc: "Подлый токсин. Максимум 1 использование!", range: "Поддержка", rank: "◉◉◉◉", target: "На себя", damage: "—", accuracy: "—", crit: "—", effect: [], self: [{ type: "buff", value: "+15 к уклонению" }, { type: "blight", value: "снимает яд" }, { type: "bleed", value: "снимает кровотечение" }, { type: "debuff", value: "снимает ослабления" }] },
+    "Thrown Dagger": { desc: "Бросок ножа", range: "Дальний", rank: "◉◉◉○", target: "○◉◉◉", damage: "+0%", accuracy: "120", crit: "12%", effect: [{ type: "mark", value: "+60% урона по отмеченным" }], self: [] },
+    "Flashing Daggers": { desc: "Мерцающие кинжалы", range: "Дальний", rank: "◉◉◉○", target: "○◉-◉○", damage: "-20%", accuracy: "100", crit: "-1%", effect: [{ type: "debuff", value: "-33% сопротивления кровотечению" }], self: [] }
+  },
+  "Hellion": {
+    "Wicked Hack": { desc: "Глубокий рубец", range: "Ближний", rank: "○○◉◉", target: "◉◉○○", damage: "+0%", accuracy: "90", crit: "8%", effect: [{ type: "deathblow", value: "+30% к смерт. удару" }], self: [] },
+    "Iron Swan": { desc: "Железный лебедь", range: "Ближний", rank: "○○○◉", target: "○○○◉", damage: "+0%", accuracy: "90", crit: "7%", effect: [{ type: "deathblow", value: "+40% к смерт. удару" }], self: [] },
+    "If It Bleeds": { desc: "Если кровоточит", range: "Ближний", rank: "○◉◉◉", target: "○◉◉○", damage: "-35%", accuracy: "80", crit: "4%", effect: [{ type: "bleed", value: "4 урона/раунд на 3 раунда" }], self: [] },
+    "Terrifying YAWP!": { desc: "Пугающий ВОПЛЬ!", range: "Ближний", rank: "○○◉◉", target: "◉-◉○○", damage: "-100%", accuracy: "110", crit: "—", effect: [{ type: "stress", value: "+20" }, { type: "debuff", value: "-15 к уклонению" }], self: [] },
+    "Breakthrough": { desc: "Прорыв", range: "Ближний", rank: "◉◉◉○", target: "◉-◉-◉○", damage: "-50%", accuracy: "90", crit: "3%", effect: [], self: [{ type: "forward", value: "рывок на 1 позицию" }, { type: "debuff", value: "-10% урона" }, { type: "daze", value: "1 раунд" }] },
+    "Adrenaline Rush": { desc: "Прилив адреналина. Максимум 4 использования за бой!", range: "Поддержка", rank: "◉◉◉◉", target: "На себя", damage: "—", accuracy: "—", crit: "—", effect: [{ type: "heal", value: "4" }, { type: "buff", value: "+10 к точности, +30% к урону" }], self: [{ type: "blight", value: "снимает с себя" }, { type: "bleed", value: "снимает с себя" }, { type: "debuff", value: "снимает с себя" }] },
+    "Bleed Out": { desc: "Истечь кровью", range: "Ближний", rank: "○○○◉", target: "◉◉○○", damage: "+20%", accuracy: "80", crit: "10%", effect: [{ type: "bleed", value: "5 урона/раунд на 3 раунда" }], self: [{ type: "debuff", value: "-20% урона" }, { type: "daze", value: "1 раунд" }] }
+  },
+  "Highwayman": {
+    "Wicked Slice": { desc: "Глубокий порез", range: "Ближний", rank: "○◉◉◉", target: "◉◉○○", damage: "+15%", accuracy: "90", crit: "9%", effect: [{ type: "deathblow", value: "+20% к смерт. удару" }], self: [] },
+    "Pistol Shot": { desc: "Пистолетный выстрел", range: "Дальний", rank: "◉◉◉○", target: "○◉◉◉", damage: "-15%", accuracy: "90", crit: "11.5%", effect: [{ type: "mark", value: "+70% к урону по отмеченным" }], self: [] },
+    "Point Blank Shot": { desc: "Неприцельный выстрел", range: "Дальний", rank: "○○○◉", target: "◉○○○", damage: "+50%", accuracy: "110", crit: "9%", effect: [{ type: "back", value: "отбрасывание на 1 позицию" }, { type: "deathblow", value: "+30% к смерт. удару" }], self: [{ type: "back", value: "назад на 1 позицию" }] },
+    "Grapeshot Blast": { desc: "Картечный залп", range: "Дальний", rank: "○◉◉○", target: "◉-◉-◉○", damage: "-50%", accuracy: "80", crit: "-5%", effect: [{ type: "stress", value: "+15" }], self: [] },
+    "Vendetta": { desc: "Вендетта. Максимум 1 использование!", range: "Дальний", rank: "◉◉◉◉", target: "◉◉◉◉", damage: "-80%", accuracy: "125", crit: "1%", effect: [{ type: "stealth", value: "действует сквозь невидимость" }, { type: "debuff", value: "-20 к уклонению" }], self: [{ type: "buff", value: "+10 к точности, +8% к криту, +30% к урону" }, { type: "stealth", value: "игнорирует невидимость" }] },
+    "Duelist's Advance": { desc: "Боевой натиск", range: "Ближний", rank: "◉◉◉○", target: "◉◉◉○", damage: "-20%", accuracy: "100", crit: "9%", effect: [], self: [{ type: "forward", value: "рывок на 1 позицию" }, { type: "riposte", value: "контратака -15% урона +5% крита (3 раунда)" }] },
+    "Open Vein": { desc: "Порез вены", range: "Ближний", rank: "○◉◉◉", target: "◉◉○○", damage: "-15%", accuracy: "100", crit: "4%", effect: [{ type: "bleed", value: "4 урона/раунд на 3 раунда" }], self: [] }
+  },
+  "Houndmaster": {
+    "Hound's Rush": { desc: "Бросок гончей", range: "Дальний", rank: "◉◉◉○", target: "◉◉◉◉", damage: "+0%", accuracy: "85", crit: "9%", effect: [{ type: "bleed", value: "2 урона/раунд на 3 раунда" }, { type: "mark", value: "+100% урона по отмеченным" }], self: [] },
+    "Hound's Harry": { desc: "Наскок гончей", range: "Дальний", rank: "◉◉◉◉", target: "◉-◉-◉-◉", damage: "-80%", accuracy: "85", crit: "-1%", effect: [{ type: "bleed", value: "2 урона/раунд на 3 раунда" }, { type: "stress", value: "+12" }], self: [] },
+    "Target Whistle": { desc: "Прицельный свист", range: "Дальний", rank: "◉◉◉◉", target: "◉◉◉◉", damage: "-100%", accuracy: "120", crit: "—", effect: [{ type: "mark", value: "метка на 3 раунда" }, { type: "debuff", value: "-30% к защите" }], self: [] },
+    "Cry Havoc": { desc: "Губительный крик", range: "Поддержка", rank: "◉◉○○", target: "◉-◉-◉-◉", damage: "—", accuracy: "—", crit: "—", effect: [{ type: "stress", value: "-15" }], self: [] },
+    "Lick Wounds": { desc: "Зализывание ран", range: "Поддержка", rank: "◉◉◉○", target: "На себя", damage: "—", accuracy: "—", crit: "—", effect: [{ type: "heal", value: "5 + 4 HP/раунд на 3 раунда" }], self: [] },
+    "Blackjack": { desc: "Блэкджек", range: "Ближний", rank: "○○◉◉", target: "◉◉◉○", damage: "-65%", accuracy: "110", crit: "9%", effect: [{ type: "stun", value: "100% база" }], self: [] },
+    "Guard Dog": { desc: "Сторожевой пёс", range: "Поддержка", rank: "◉◉◉◉", target: "◉◉◉◉", damage: "—", accuracy: "—", crit: "—", effect: [{ type: "guard", value: "оборона (3 раунда)" }, { type: "buff", value: "-70% стресса, +50% сопротивления ослаблениям" }], self: [{ type: "buff", value: "+20 к уклонению" }] }
+  },
+  "Jester": {
+    "Dirk Stab": { desc: "Удар кинжалом", range: "Ближний", rank: "◉◉◉◉", target: "◉◉◉○", damage: "+0%", accuracy: "90", crit: "9%", effect: [{ type: "guard", value: "игнорирует оборону" }, { type: "buff", value: "+10% к смерт. удару" }], self: [{ type: "forward", value: "рывок на 1 позицию" }, { type: "buff", value: "+40% урона Finale (8 раундов)" }] },
+    "Finale": { desc: "Финал. Максимум 1 использование за бой!", range: "Ближний", rank: "○○◉◉", target: "◉◉◉◉", damage: "+0%", accuracy: "150", crit: "9%", effect: [{ type: "deathblow", value: "игнорирует предсмертное состояние" }], self: [{ type: "debuff", value: "-10 ACC" }] },
+    "Solo": { desc: "Соло. Максимум 4 использования за бой!", range: "Дальний", rank: "◉◉○○", target: "◉-◉-◉-◉", damage: "-100%", accuracy: "130", crit: "—", effect: [{ type: "stress", value: "+12" }], self: [{ type: "forward", value: "рывок на 3 позиции" }, { type: "mark", value: "отмечает себя (3 раунда)" }, { type: "buff", value: "+15 к уклонению, +40% урона Finale" }] },
+    "Mortal Wound": { desc: "Смертельная рана", range: "Ближний", rank: "○◉◉○", target: "○◉◉○", damage: "-33%", accuracy: "110", crit: "12%", effect: [{ type: "deathblow", value: "-20% сопротивления смерт. удару" }], self: [{ type: "buff", value: "+40% урона Finale" }] },
+    "Battle Ballad": { desc: "Боевая баллада. Максимум 1 использование за бой!", range: "Поддержка", rank: "◉◉○○", target: "◉-◉-◉-◉", damage: "—", accuracy: "—", crit: "—", effect: [{ type: "buff", value: "+20 к точности (весь бой)" }], self: [{ type: "buff", value: "+40% урона Finale" }] },
+    "Inspiring Tune": { desc: "Бодрящая мелодия", range: "Поддержка", rank: "◉◉○○", target: "◉◉◉◉", damage: "—", accuracy: "—", crit: "—", effect: [{ type: "stress", value: "-30, -20% стресса" }], self: [{ type: "buff", value: "+40% урона Finale" }] },
+    "Harvest": { desc: "Урожай", range: "Ближний", rank: "○◉◉○", target: "○◉-◉○", damage: "-50%", accuracy: "85", crit: "4%", effect: [{ type: "bleed", value: "4 урона/раунд на 3 раунда" }], self: [{ type: "buff", value: "+40% урона Finale" }] }
+  },
+  "Leper": {
+    "Chop": { desc: "Рубец", range: "Ближний", rank: "○○◉◉", target: "◉◉○○", damage: "+0%", accuracy: "80", crit: "7%", effect: [], self: [] },
+    "Hew": { desc: "Сечка", range: "Ближний", rank: "○○◉◉", target: "◉-◉○○", damage: "-40%", accuracy: "80", crit: "0%", effect: [], self: [] },
+    "Intimidate": { desc: "Запугивание", range: "Ближний", rank: "○○○◉", target: "◉◉◉◉", damage: "-80%", accuracy: "110", crit: "0%", effect: [{ type: "stealth", value: "снимает невидимость" }, { type: "debuff", value: "-33% к урону" }, { type: "stress", value: "+25" }], self: [] },
+    "Purge": { desc: "Очищение", range: "Ближний", rank: "○○○◉", target: "◉○○○", damage: "-40%", accuracy: "110", crit: "4%", effect: [{ type: "back", value: "отбрасывание на 3 позиции, уничтожает трупы" }], self: [{ type: "buff", value: "+10 к точности (4 раунда)" }] },
+    "Solemnity": { desc: "Обряд. Максимум 2 использования за бой!", range: "Поддержка", rank: "○○◉◉", target: "На себя", damage: "—", accuracy: "—", crit: "—", effect: [], self: [{ type: "heal", value: "22" }, { type: "stress", value: "-15" }] },
+    "Revenge": { desc: "Месть. Максимум 1 использование за бой!", range: "Поддержка", rank: "1-2-3-4", target: "Self", damage: "—", accuracy: "—", crit: "—", effect: [], self: [{ type: "buff", value: "+15 к точности, +35% урона, +11% крита на весь бой" }, { type: "debuff", value: "-10 уклонения, +15% получаемого урона" }] },
+    "Withstand": { desc: "Выдержка. Максимум 1 использование за бой!", range: "Поддержка", rank: "○◉◉◉", target: "На себя", damage: "—", accuracy: "—", crit: "—", effect: [], self: [{ type: "buff", value: "+20% защиты, +30% сопротивлений" }] }
+  },
+  "Man-at-Arms": {
+    "Crush": { desc: "Сокрушение", range: "Ближний", rank: "○○◉◉", target: "◉◉◉○", damage: "+0%", accuracy: "90", crit: "9%", effect: [{ type: "debuff", value: "-10 к защите" }], self: [] },
+    "Rampart": { desc: "Укрепление", range: "Ближний", rank: "○◉◉◉", target: "◉◉○○", damage: "-60%", accuracy: "110", crit: "9%", effect: [{ type: "back", value: "отбрасывание на 1 позицию" }, { type: "daze", value: "1 раунд" }], self: [{ type: "forward", value: "рывок на 1 позицию" }] },
+    "Bellow": { desc: "Рёв", range: "Дальний", rank: "◉◉◉◉", target: "◉-◉-◉-◉", damage: "-100%", accuracy: "100", crit: "—", effect: [{ type: "debuff", value: "-20% урона" }, { type: "stress", value: "+12" }], self: [] },
+    "Defender": { desc: "Защитник", range: "Поддержка", rank: "◉◉◉◉", target: "◉◉◉◉", damage: "—", accuracy: "—", crit: "—", effect: [{ type: "guard", value: "оборона союзника на 3 раунда, +30% защиты" }], self: [{ type: "buff", value: "+30% к защите" }] },
+    "Retribution": { desc: "Воздаяние", range: "Поддержка", rank: "○◉◉◉", target: "◉◉◉○", damage: "-75%", accuracy: "90", crit: "6.5%", effect: [], self: [{ type: "riposte", value: "контрудар на 3 раунда" }] },
+    "Command": { desc: "Команда", range: "Поддержка", rank: "◉◉◉◉", target: "◉-◉-◉-◉", damage: "—", accuracy: "—", crit: "—", effect: [{ type: "buff", value: "+20 к точности, +4% крита" }, { type: "guard", value: "+25% урона в обороне" }], self: [] },
+    "Bolster": { desc: "Усиление. Максимум 1 использование за бой!", range: "Поддержка", rank: "◉◉◉◉", target: "◉-◉-◉-◉", damage: "—", accuracy: "—", crit: "—", effect: [{ type: "buff", value: "+10 к уклонению, -15% стресса на весь бой" }], self: [] }
+  },
+  "Occultist": {
+    "Sacrificial Stab": { desc: "Жертвенный порез", range: "Ближний", rank: "○◉◉◉", target: "◉◉◉○", damage: "+0%", accuracy: "85", crit: "13%", effect: [{ type: "deathblow", value: "+40% к смерт. удару по безумным" }], self: [] },
+    "Abyssal Artillery": { desc: "Бездонная артиллерия", range: "Дальний", rank: "◉◉○○", target: "○○◉-◉", damage: "-33%", accuracy: "90", crit: "4%", effect: [{ type: "stress", value: "+8" }, { type: "horror", value: "+ 8 стресса/раунд на 3 раунда" }], self: [] },
+    "Weakening Curse": { desc: "Ослабляющее проклятие", range: "Дальний", rank: "◉◉◉◉", target: "◉◉◉◉", damage: "-75%", accuracy: "110", crit: "9%", effect: [{ type: "debuff", value: "-20% урона, -20% защиты" }, { type: "stress", value: "+30" }], self: [] },
+    "Wyrd Reconstruction": { desc: "Восстановление", range: "Поддержка", rank: "◉◉◉◉", target: "◉◉◉◉", damage: "—", accuracy: "—", crit: "—", effect: [{ type: "heal", value: "0-24" }, { type: "bleed", value: "3 урона/раунд на 3 раунда" }], self: [] },
+    "Vulnerability Hex": { desc: "Проклятие уязвимости", range: "Дальний", rank: "◉◉◉◉", target: "◉◉◉◉", damage: "-90%", accuracy: "110", crit: "9%", effect: [{ type: "mark", value: "метка на 3 раунда" }, { type: "debuff", value: "-20 к уклонению" }, { type: "stress", value: "+30" }], self: [] },
+    "Stygian Embrace": { desc: "Объятие тьмы. Максимум 3 использования за бой!", range: "Поддержка", rank: "◉◉◉◉", target: "◉◉◉◉", damage: "—", accuracy: "—", crit: "—", effect: [{ type: "heal", value: "1-2" }, { type: "stealth", value: "невидимость на 2 раунда" }], self: [] },
+    "Daemon's Pull": { desc: "Демоническая тяга", range: "Дальний", rank: "◉◉◉○", target: "○○◉◉", damage: "-50%", accuracy: "120", crit: "9%", effect: [{ type: "forward", value: "притягивает на 2 позиции, уничтожает трупы" }, { type: "horror", value: "10/раунд на 3 раунда" }], self: [] }
+  },
+  "Plague Doctor": {
+    "Noxious Blast": { desc: "Ядовитый залп", range: "Дальний", rank: "◉◉◉○", target: "◉◉○○", damage: "-80%", accuracy: "95", crit: "9%", effect: [{ type: "blight", value: "6 урона/раунд на 3 раунда" }, { type: "stress", value: "+20" }], self: [] },
+    "Plague Grenade": { desc: "Чумная граната", range: "Дальний", rank: "◉◉○○", target: "○○◉-◉", damage: "-90%", accuracy: "95", crit: "4%", effect: [{ type: "blight", value: "5 урона/раунд на 3 раунда" }, { type: "stress", value: "+8" }], self: [] },
+    "Blinding Gas": { desc: "Слепящий газ", range: "Дальний", rank: "◉◉○○", target: "○○◉-◉", damage: "-100%", accuracy: "95", crit: "—", effect: [{ type: "stress", value: "+25" }, { type: "debuff", value: "-20 к точности" }], self: [] },
+    "Battlefield Medicine": { desc: "Боевая медицина", range: "Поддержка", rank: "◉◉○○", target: "◉◉◉◉", damage: "—", accuracy: "—", crit: "—", effect: [{ type: "heal", value: "3" }, { type: "blight", value: "снимает яд" }, { type: "bleed", value: "снимает кровотечение" }], self: [{ type: "blight", value: "снимает яд" }, { type: "bleed", value: "снимает кровотечение" }] },
+    "Incision": { desc: "Надрез", range: "Ближний", rank: "○◉◉◉", target: "◉◉○○", damage: "+0%", accuracy: "85", crit: "9%", effect: [{ type: "bleed", value: "4 урона/раунд на 3 раунда" }], self: [] },
+    "Emboldening Vapours": { desc: "Ободряющий пар. Максимум 2 использования за бой!", range: "Поддержка", rank: "◉◉◉◉", target: "◉◉◉◉", damage: "—", accuracy: "—", crit: "—", effect: [{ type: "buff", value: "+25% урона, +10 к точности на весь бой" }], self: [] },
+    "Disorienting Blast": { desc: "Дезориентирующий залп", range: "Дальний", rank: "◉◉◉○", target: "○◉◉◉", damage: "-100%", accuracy: "95", crit: "0%", effect: [{ type: "stress", value: "+30" }, { type: "back", value: "меняет местами с врагом, уничтожает трупы" }, { type: "daze", value: "1 раунд" }], self: [] }
+  },
+  "Vestal": {
+    "Mace Bash": { desc: "Удар булавой", range: "Ближний", rank: "○○◉◉", target: "◉◉○○", damage: "+0%", accuracy: "90", crit: "4%", effect: [{ type: "daze", value: "100% база" }], self: [] },
+    "Judgement": { desc: "Осуждение", range: "Дальний", rank: "◉◉○○", target: "◉◉◉◉", damage: "-25%", accuracy: "90", crit: "9%", effect: [], self: [{ type: "heal", value: "5" }] },
+    "Dazzling Light": { desc: "Слепящий свет", range: "Дальний", rank: "◉◉◉○", target: "◉◉◉○", damage: "-75%", accuracy: "100", crit: "9%", effect: [{ type: "stun", value: "100% база" }, { type: "stress", value: "+8" }], self: [] },
+    "Divine Grace": { desc: "Божья милость", range: "Поддержка", rank: "◉◉○○", target: "◉◉◉◉", damage: "—", accuracy: "—", crit: "—", effect: [{ type: "heal", value: "11-14 и снимает ужас" }], self: [] },
+    "Divine Comfort": { desc: "Божье утешение", range: "Поддержка", rank: "◉◉◉◉", target: "◉-◉-◉-◉", damage: "—", accuracy: "—", crit: "—", effect: [{ type: "heal", value: "4-5" }], self: [] },
+    "Illumination": { desc: "Освещение", range: "Поддержка", rank: "○◉◉◉", target: "◉◉◉◉", damage: "-75%", accuracy: "100", crit: "—", effect: [{ type: "stealth", value: "снимает невидимость" }, { type: "debuff", value: "-30 к уклонению" }, { type: "stress", value: "+10" }], self: [] },
+    "Hand of Light": { desc: "Рука света", range: "Ближний", rank: "○○◉◉", target: "◉◉◉○", damage: "-30%", accuracy: "90", crit: "5%", effect: [], self: [{ type: "buff", value: "+10 к точности, +35% урона, +15% смерт. удара (4 раунда)" }] }
+  },
+  "Shieldbreaker": {
+    "Pierce": { desc: "Пробивание", range: "Ближний", rank: "○◉◉◉", target: "◉◉◉◉", damage: "-10%", accuracy: "100", crit: "9%", effect: [{ type: "buff", value: "игнорирует защиту" }], self: [{ type: "forward", value: "рывок на 1 позицию" }] },
+    "Puncture": { desc: "Ошеломление", range: "Ближний", rank: "◉◉◉◉", target: "◉◉◉◉", damage: "-50%", accuracy: "120", crit: "0%", effect: [{ type: "guard", value: "игнорирует/отменяет оборону" }, { type: "unguard", value: "невозможно выбрать целью для обороны на 2 раунда (500% база)" }, { type: "back", value: "притягивает на 2 позиции" }], self: [{ type: "forward", value: "рывок на 1 позицию" }] },
+    "Captivate": { desc: "Очарование", range: "Ближний", rank: "○◉◉○", target: "○◉◉○", damage: "-30%", accuracy: "80", crit: "8%", effect: [{ type: "blight", value: "4 урона/раунд на 4 раунда" }, { type: "daze", value: "1 раунд" }], self: [] },
+    "Impale": { desc: "Пронзание", range: "Ближний", rank: "○○○◉", target: "◉-◉-◉-◉", damage: "-70%", accuracy: "90", crit: "-2%", effect: [{ type: "blight", value: "2 урона/раунд на 3 раунда" }], self: [{ type: "back", value: "назад на 1 позицию" }] },
+    "Adder's Kiss": { desc: "Змеиный поцелуй", range: "Ближний", rank: "○○○◉", target: "◉◉○○", damage: "-20%", accuracy: "85", crit: "9%", effect: [{ type: "blight", value: "5 урона/раунд на 5 раундов" }], self: [{ type: "back", value: "назад на 1 позицию" }] },
+    "Serpent Sway": { desc: "Раскачивание змеи. Максимум 2 использования за бой!", range: "Поддержка", rank: "○○◉◉", target: "На себя", damage: "—", accuracy: "—", crit: "—", effect: [], self: [{ type: "forward", value: "рывок на 1 позицию" }, { type: "block", value: "2 блокирования" }, { type: "buff", value: "+15 к уклонению" }] },
+    "Expose": { desc: "Прокалывание", range: "Ближний", rank: "○◉◉◉", target: "◉◉◉○", damage: "-40%", accuracy: "100", crit: "6.5%", effect: [{ type: "stealth", value: "снимает невидимость" }, { type: "debuff", value: "+20% к урону от критов" }, { type: "stress", value: "+20" }], self: [{ type: "back", value: "назад на 1 позицию" }] }
+  },
+  "Musketeer": {
+    "Aimed Shot": { desc: "Прицельный выстрел", range: "Дальний", rank: "◉◉○○", target: "○◉◉◉", damage: "+25%", accuracy: "110", crit: "9%", effect: [{ type: "mark", value: "+50% урона, +13% крита, +30% смерт. удара по отмеченным" }], self: [] },
+    "Smokescreen": { desc: "Дымовая завеса", range: "Дальний", rank: "◉◉○○", target: "○○◉-◉", damage: "-80%", accuracy: "110", crit: "-6%", effect: [{ type: "stress", value: "+12" }, { type: "debuff", value: "+25% получаемого стресса" }], self: [] },
+    "Call the Shot": { desc: "Указать цель", range: "Дальний", rank: "◉◉○○", target: "○◉◉◉", damage: "-100%", accuracy: "130", crit: "—", effect: [{ type: "mark", value: "метка на 3 раунда" }, { type: "debuff", value: "-30 к уклонению" }], self: [] },
+    "Buckshot": { desc: "Картечь", range: "Дальний", rank: "○◉◉◉", target: "◉-◉○○", damage: "-50%", accuracy: "110", crit: "6%", effect: [{ type: "back", value: "отбрасывание на 1 позицию" }], self: [{ type: "back", value: "назад на 1 позицию" }] },
+    "Quickdraw": { desc: "Быстрая реакция", range: "Дальний", rank: "◉◉◉◉", target: "◉◉◉◉", damage: "-10%", accuracy: "80", crit: "4%", effect: [{ type: "stealth", value: "стреляет сквозь невидимость" }], self: [] },
+    "Ranging Shot": { desc: "Дальний выстрел", range: "Дальний", rank: "◉◉◉◉", target: "◉-◉-◉-◉", damage: "-100", accuracy: "110", crit: "—", effect: [{ type: "stealth", value: "снимает невидимость" }, { type: "stress", value: "-12, -10% получаемого стресса" }, { type: "buff", value: "+10 к точности" }, { type: "mark", value: "снимает метку" }, { type: "debuff", value: "снимает ослабления" }], self: [] },
+    "Patch Up": { desc: "Подлечить", range: "Поддержка", rank: "◉◉○○", target: "◉◉◉◉", damage: "—", accuracy: "—", crit: "—", effect: [{ type: "heal", value: "+7-9" }, { type: "buff", value: "+25% к получаемому лечению" }], self: [] }
+  }
+};
+
+const DRAFT_ORDER = [
+  { player: 1, action: "ban" }, { player: 2, action: "ban" },
+  { player: 2, action: "ban" }, { player: 1, action: "ban" },
+  { player: 1, action: "pick" }, { player: 2, action: "pick" },
+  { player: 2, action: "pick" }, { player: 1, action: "pick" },
+  { player: 1, action: "ban" }, { player: 2, action: "ban" },
+  { player: 2, action: "ban" }, { player: 1, action: "ban" },
+  { player: 1, action: "pick" }, { player: 2, action: "pick" },
+  { player: 2, action: "pick" }, { player: 1, action: "pick" }
+];
+
+const BANS_PER_HERO = 2;
+
+const ABILITY_ORDER = [
+  { player: 1, action: "ban",  owner: 2, heroIdx: 0 },
+  { player: 2, action: "ban",  owner: 1, heroIdx: 0 },
+  { player: 2, action: "ban",  owner: 1, heroIdx: 1 },
+  { player: 1, action: "ban",  owner: 2, heroIdx: 1 },
+  { player: 1, action: "pick", owner: 1, heroIdx: 0 },
+  { player: 2, action: "pick", owner: 2, heroIdx: 0 },
+  { player: 2, action: "pick", owner: 2, heroIdx: 1 },
+  { player: 1, action: "pick", owner: 1, heroIdx: 1 },
+  { player: 1, action: "ban",  owner: 2, heroIdx: 2 },
+  { player: 2, action: "ban",  owner: 1, heroIdx: 2 },
+  { player: 2, action: "ban",  owner: 1, heroIdx: 3 },
+  { player: 1, action: "ban",  owner: 2, heroIdx: 3 },
+  { player: 1, action: "pick", owner: 1, heroIdx: 2 },
+  { player: 2, action: "pick", owner: 2, heroIdx: 2 },
+  { player: 2, action: "pick", owner: 2, heroIdx: 3 },
+  { player: 1, action: "pick", owner: 1, heroIdx: 3 },
+  { player: 1, action: "ban",  owner: 2, heroIdx: 0 },
+  { player: 2, action: "ban",  owner: 1, heroIdx: 0 },
+  { player: 2, action: "ban",  owner: 1, heroIdx: 1 },
+  { player: 1, action: "ban",  owner: 2, heroIdx: 1 },
+  { player: 1, action: "pick", owner: 1, heroIdx: 0 },
+  { player: 2, action: "pick", owner: 2, heroIdx: 0 },
+  { player: 2, action: "pick", owner: 2, heroIdx: 1 },
+  { player: 1, action: "pick", owner: 1, heroIdx: 1 },
+  { player: 1, action: "ban",  owner: 2, heroIdx: 2 },
+  { player: 2, action: "ban",  owner: 1, heroIdx: 2 },
+  { player: 2, action: "ban",  owner: 1, heroIdx: 3 },
+  { player: 1, action: "ban",  owner: 2, heroIdx: 3 },
+  { player: 1, action: "pick", owner: 1, heroIdx: 2 },
+  { player: 2, action: "pick", owner: 2, heroIdx: 2 },
+  { player: 2, action: "pick", owner: 2, heroIdx: 3 },
+  { player: 1, action: "pick", owner: 1, heroIdx: 3 },
+];
+
+// ====== СОСТОЯНИЕ ======
+let state, currentStep, p1Bans, p1Picks, p2Bans, p2Picks;
+let abilityPhase, abilityStep, abilityBansByHero, abilityPicksByHero;
+let lastAction = null, lastAbilityAction = null, justEnteredAbilityPhase = false;
+let playerNames = ["Игрок 1", "Игрок 2"];
+let firstPlayerIdx = null;
+let heroAnimationToken = 0;
+
+// ====== СЕТЕВОЕ СОСТОЯНИЕ ======
+let isHost = false;
+let draftToken = 0;
+let abilityTransitionTimer = null;
+let networkMode = false;
+let gameMode = 'normal'; // 'normal' или 'ranked'
+let lobbyCode = null;
+let myRole = null;
+let myNetName = '';
+let remoteNetName = '';
+let iAmReady = false;
+let remoteIsReady = false;
+let remoteStats = null;
+let hostIsFirst = null;
+let coinFlipped = false;
+let isConnected = false;
+let room = null;
+let sendMsg = null;
+const TRYSTERO_CONFIG = { appId: 'dd-draft-v1' };
+
+let lastPhaseSignature = null;
+let phaseSplashToken = 0;
+
+function getPhaseSignature() {
+  if (abilityPhase === "ability") return "ability_start";
+  if (abilityPhase === "done") return "done";
+  const turn = getCurrentTurn();
+  if (!turn) return "no_turn";
+  return turn.action + "_" + turn.player;
+}
+
+function getPhaseLabel() {
+  if (abilityPhase === "ability") return "Фаза драфта способностей";
+  const turn = getCurrentTurn();
+  if (!turn) return null;
+  const actionRu = turn.action === "ban" ? "бана игрока" : "пика игрока";
+  return "Фаза " + actionRu + " " + displayName(turn.player);
+}
+
+function checkPhaseChange() {
+  const sig = getPhaseSignature();
+  if (sig === lastPhaseSignature) return;
+  lastPhaseSignature = sig;
+  if (sig === "done" || sig === "no_turn") return;
+  const label = getPhaseLabel();
+  if (label) showPhaseSplash(label);
+}
+
+function showPhaseSplash(text) {
+  const el = document.getElementById("phase-splash");
+  const txt = document.getElementById("phase-splash-text");
+  if (!el || !txt) return;
+  const token = ++phaseSplashToken;
+  el.classList.remove("active");
+  void el.offsetWidth;
+  txt.textContent = text;
+  el.classList.add("active");
+  setTimeout(() => {
+    if (token === phaseSplashToken) el.classList.remove("active");
+  }, 1800);
+}
+
+function init() {
+  draftToken++;
+  const el = document.getElementById("ability-phase");
+  if (el) { el.style.transition = ""; el.style.opacity = ""; }
+  const draftScreenEl = document.getElementById("draft-screen");
+  if (draftScreenEl) draftScreenEl.classList.remove("draft-completed");
+  lastPhaseSignature = null;
+  state = {}; HEROES.forEach(h => state[h] = "available");
+  currentStep = 0; p1Bans = []; p1Picks = []; p2Bans = []; p2Picks = [];
+  abilityPhase = "none";
+  abilityStep = 0;
+  abilityBansByHero = {};
+  abilityPicksByHero = {};
+  lastAction = null; lastAbilityAction = null; justEnteredAbilityPhase = false;
+  winnerAlreadySelected = false;
+  announcedWinnerName = null;
+  hideHeroAnimation();
+  hideHeroTooltip();
+  render();
+}
+
+function displayName(draftPlayer) {
+  if (firstPlayerIdx === null) return "Игрок " + draftPlayer;
+  return draftPlayer === 1 ? playerNames[firstPlayerIdx] : playerNames[1 - firstPlayerIdx];
+}
+
+function flipCoin() {
+  const coinEl = document.getElementById("coin-display");
+  const coin = document.getElementById("coin");
+  const resultEl = document.getElementById("coin-result");
+  const startBtn = document.getElementById("start-btn");
+  const flipBtn = document.getElementById("flip-btn");
+  playerNames = [
+    document.getElementById("name-input-1").value.trim() || "Игрок 1",
+    document.getElementById("name-input-2").value.trim() || "Игрок 2"
+  ];
+  firstPlayerIdx = Math.random() < 0.5 ? 0 : 1;
+  resultEl.textContent = ""; startBtn.style.display = "none"; flipBtn.disabled = true;
+  coinEl.style.display = "flex";
+
+  setCoinFace("coin-img", "heads");
+
+  coin.classList.remove("flipping");
+  void coin.offsetWidth;
+  coin.classList.add("flipping");
+
+  const flipInterval = setInterval(() => {
+    setCoinFace("coin-img", Math.random() < 0.5 ? "heads" : "tails");
+  }, 120);
+
+  setTimeout(() => {
+    clearInterval(flipInterval);
+    setCoinFace("coin-img", firstPlayerIdx === 0 ? "heads" : "tails");
+    flipBtn.disabled = false;
+    resultEl.innerHTML = `Первым ходит: <strong>${playerNames[firstPlayerIdx]}</strong>`;
+    resultEl.classList.remove("fade-in");
+    void resultEl.offsetWidth;
+    resultEl.classList.add("fade-in");
+    startBtn.style.display = "inline-block";
+  }, 1500);
+}
+
+function startDraft() {
+  networkMode = false;
+  if (firstPlayerIdx === null) { flipCoin(); return; }
+  document.getElementById("setup-screen").style.display = "none";
+  document.getElementById("draft-screen").style.display = "block";
+  document.querySelector('.site-header').style.display = "none";
+  init();
+}
+
+function backToSetup() {
+window.__leaderboardSent = false;
+if (networkMode) {
+    document.getElementById("draft-screen").style.display = "none";
+    document.getElementById("lobby-screen").style.display = "block";
+    document.querySelector('.site-header').style.display = "block";
+
+    document.getElementById("net-coin-display").style.display = "none";
+    document.getElementById("net-coin-result").textContent = "";
+    document.getElementById("net-coin-img").src = "";
+    document.getElementById("flip-net-btn").disabled = false;
+
+    resetDraftInternal();
+    coinFlipped = false;
+    hostIsFirst = null;
+    window.__leaderboardSent = false;
+    updateLobbyUI();
+    return;
+}
+  document.getElementById("draft-screen").style.display = "none";
+  document.getElementById("setup-screen").style.display = "block";
+  document.querySelector('.site-header').style.display = "block";
+  document.getElementById("coin-result").textContent = "";
+  document.getElementById("start-btn").style.display = "none";
+  document.getElementById("coin-display").style.display = "none";
+  hideHeroAnimation();
+  hideHeroTooltip();
+}
+
+function showLocalGame() {
+  document.getElementById("start-screen").style.display = "none";
+  document.getElementById("setup-screen").style.display = "block";
+}
+
+function startNetworkGame(mode) {
+  gameMode = mode;
+  document.getElementById("mode-select-screen").style.display = "none";
+  document.getElementById("lobby-screen").style.display = "block";
+  const lobbyTitle = document.querySelector("#lobby-screen h2");
+  if (lobbyTitle) lobbyTitle.textContent = "Сетевое лобби" + (mode === "ranked" ? " (рейтинг)" : " (обычный)");
+}
+
+function backFromModeSelect() {
+  document.getElementById("mode-select-screen").style.display = "none";
+  document.getElementById("start-screen").style.display = "block";
+}
+
+function showNetworkGame() {
+  document.getElementById("start-screen").style.display = "none";
+  document.getElementById("mode-select-screen").style.display = "block";
+}
+
+function backToStart() {
+  document.getElementById("lobby-screen").style.display = "none";
+  document.getElementById("setup-screen").style.display = "none";
+  document.getElementById("draft-screen").style.display = "none";
+  document.getElementById("start-screen").style.display = "block";
+  document.querySelector('.site-header').style.display = "block";
+}
+
+function backToStartFromLobby() {
+  if (room) { try { room.leave(); } catch(e){} }
+  room = null; sendMsg = null;
+  isHost = false; lobbyCode = null;
+  myNetName = ''; remoteNetName = '';
+  iAmReady = false; remoteIsReady = false;
+  hostIsFirst = null; coinFlipped = false;
+  isConnected = false;
+  window.__leaderboardSent = false; // сброс флага
+  document.getElementById("lobby-preconnect").style.display = "block";
+  document.getElementById("lobby-code-display").style.display = "none";
+  document.getElementById("lobby-status").textContent = '';
+  document.getElementById("lobby-name-input").style.display = "none";
+  document.getElementById("lobby-coin-area").style.display = "none";
+  document.getElementById("start-net-btn").style.display = "none";
+  document.getElementById("net-coin-result").textContent = '';
+  document.getElementById("lobby-names-status").innerHTML = '';
+  backToStart();
+}
+
+function makeIcon(src, alt, className) {
+  const img = document.createElement("img");
+  const displayAlt = (alt && HERO_NAMES_RU[alt]) ? HERO_NAMES_RU[alt] : (alt || "");
+  img.className = className;
+  img.alt = displayAlt;
+  img.title = displayAlt;
+  img.loading = "lazy";
+  img.src = src;
+  img.onerror = () => {
+    const ph = document.createElement("span");
+    ph.className = className + " placeholder";
+    ph.textContent = displayAlt.slice(0, 2).toUpperCase();
+    ph.title = displayAlt;
+    img.replaceWith(ph);
+  };
+  return img;
+}
+
+function getAbilityIcon(hero, ability) { return (ABILITY_ICONS[hero] || {})[ability] || ""; }
+
+function renderEffectTags(effects) {
+  if (!effects || effects.length === 0) return "—";
+  return effects.map(e => {
+    const meta = EFFECTS[e.type] || { label: e.type, color: "#e0d5c0", url: "" };
+    const iconHtml = meta.url
+      ? `<img src="${meta.url}" alt="" onerror="this.style.display='none'">`
+      : "";
+    return `<span class="effect-tag"><span style="color:${meta.color}">${meta.label}</span>${iconHtml}${e.value ? ": " + e.value : ""}</span>`;
+  }).join(" ");
+}
+
+function buildAbilityTooltipHtml(hero, ability) {
+  const info = (ABILITY_DESCRIPTIONS[hero] || {})[ability];
+  if (!info) return "";
+  const rows = [
+    ["Тип", info.range], ["Позиция", info.rank], ["Цель", info.target],
+    ["Урон", info.damage], ["Точность", info.accuracy], ["Крит. мод.", info.crit]
+  ];
+  let tableHtml = "";
+  rows.forEach(([label, val]) => {
+    if (val && val !== "—") tableHtml += `<tr><td>${label}:</td><td>${val}</td></tr>`;
+  });
+  if (info.effect && info.effect.length > 0) tableHtml += `<tr><td>Эффект:</td><td>${renderEffectTags(info.effect)}</td></tr>`;
+  if (info.self && info.self.length > 0) tableHtml += `<tr><td>На себя:</td><td>${renderEffectTags(info.self)}</td></tr>`;
+  return `<div class="tt-desc">${info.desc || ""}</div><table class="tt-table">${tableHtml}</table>`;
+}
+
+function showHeroTooltip(hero, x, y) {
+  const s = HERO_STATS[hero];
+  if (!s) return;
+  const el = document.getElementById("hero-tooltip");
+  const religious = s.religious === "Да"
+    ? '<span class="ht-value good">Да</span>'
+    : '<span class="ht-value">Нет</span>';
+  const resistLine = (label, effectKey, value) => {
+    const meta = EFFECTS[effectKey] || {};
+    const color = meta.color || "#e0d5c0";
+    const iconHtml = meta.url
+      ? `<img class="ht-icon" src="${meta.url}" alt="" onerror="this.style.display='none'">`
+      : "";
+    return `<div class="ht-row">
+      <span class="ht-label"><span style="color:${color}">${label}</span>${iconHtml}</span>
+      <span class="ht-value">${value}</span>
+    </div>`;
+  };
+  el.innerHTML = `
+    <div class="ht-title">${HERO_NAMES_RU[hero] || hero}</div>
+    <div class="ht-section">Характеристики</div>
+    <div class="ht-grid">
+      <div class="ht-row"><span class="ht-label">ЗДОРОВЬЕ</span><span class="ht-value">${s.hp}</span></div>
+      <div class="ht-row"><span class="ht-label">УКЛОНЕНИЕ</span><span class="ht-value">${s.dodge}</span></div>
+      <div class="ht-row"><span class="ht-label">ЗАЩИТА</span><span class="ht-value">${s.prot}%</span></div>
+      <div class="ht-row"><span class="ht-label">ТОЧНОСТЬ</span><span class="ht-value">${s.acc}</span></div>
+      <div class="ht-row"><span class="ht-label">КРИТ. ШАНС</span><span class="ht-value">${s.crit}</span></div>
+      <div class="ht-row"><span class="ht-label">УРОН</span><span class="ht-value">${s.dmg}</span></div>
+    </div>
+    <div class="ht-section">Сопротивляемости</div>
+    <div class="ht-grid">
+      ${resistLine("Оглушение", "stun", s.stun)}
+      ${resistLine("Смещение", "back", s.moveResist)}
+      ${resistLine("Яд", "blight", s.blight)}
+      ${resistLine("Кровотечение", "bleed", s.bleed)}
+      ${resistLine("Ослабление", "debuff", s.debuff)}
+      ${resistLine("Смерт. удар", "deathblow", s.deathblow)}
+    </div>
+    <div class="ht-section">Дополнительно</div>
+    <div class="ht-grid">
+      <div class="ht-row"><span class="ht-label">Передвижение</span><span class="ht-value">${s.movement}</span></div>
+      <div class="ht-row"><span class="ht-label">Бонус от крит. шанса</span><span class="ht-value">${s.critBuff}</span></div>
+      <div class="ht-row"><span class="ht-label">Религиозность</span>${religious}</div>
+    </div>
+  `;
+  el.classList.add("active");
+  positionHeroTooltip(x, y);
+}
+
+function positionHeroTooltip(x, y) {
+  const el = document.getElementById("hero-tooltip");
+  if (!el) return;
+  const rect = el.getBoundingClientRect();
+  const pad = 15;
+  let left = x + pad;
+  let top = y + pad;
+  if (left + rect.width > window.innerWidth - 10) left = x - rect.width - pad;
+  if (top + rect.height > window.innerHeight - 10) top = y - rect.height - pad;
+  el.style.left = left + "px";
+  el.style.top = top + "px";
+}
+
+function hideHeroTooltip() {
+  const el = document.getElementById("hero-tooltip");
+  if (el) el.classList.remove("active");
+}
+
+function attachHeroTooltip(el, hero) {
+  el.addEventListener("mouseenter", (e) => showHeroTooltip(hero, e.clientX, e.clientY));
+  el.addEventListener("mousemove", (e) => positionHeroTooltip(e.clientX, e.clientY));
+  el.addEventListener("mouseleave", hideHeroTooltip);
+}
+
+function getCurrentTurn() { return currentStep < DRAFT_ORDER.length ? DRAFT_ORDER[currentStep] : null; }
+
+function hideHeroAnimation() {
+  const overlay = document.getElementById("hero-animation-overlay");
+  if (overlay) overlay.classList.remove("active");
+}
+
+function showHeroAnimation(hero, action) {
+  const url = (action === "ban" ? AFFLICTED_IMAGES : HEROIC_IMAGES)[hero];
+  if (!url) return;
+  const overlay = document.getElementById("hero-animation-overlay");
+  const img = document.getElementById("hero-animation-img");
+  if (!overlay || !img) return;
+  const token = ++heroAnimationToken;
+  img.onerror = () => { if (token === heroAnimationToken) hideHeroAnimation(); };
+  overlay.classList.remove("active");
+  void overlay.offsetWidth;
+  img.src = url;
+  overlay.classList.add("active");
+  setTimeout(() => { if (token === heroAnimationToken) hideHeroAnimation(); }, 1500);
+}
+
+// ====== СЕТЕВЫЕ ФУНКЦИИ (Trystero P2P) ======
+function snapshotState() {
+  return {
+    state, currentStep, p1Bans, p1Picks, p2Bans, p2Picks,
+    abilityPhase, abilityStep, abilityBansByHero, abilityPicksByHero,
+    playerNames, firstPlayerIdx, hostIsFirst,
+    lastAction,
+    lastAbilityAction,
+    justEnteredAbilityPhase
+  };
+}
+
+function applyState(s) {
+  const prevStep = currentStep;
+  
+  state = s.state;
+  currentStep = s.currentStep;
+  p1Bans = s.p1Bans; p1Picks = s.p1Picks;
+  p2Bans = s.p2Bans; p2Picks = s.p2Picks;
+  abilityPhase = s.abilityPhase;
+  abilityStep = s.abilityStep;
+  abilityBansByHero = s.abilityBansByHero;
+  abilityPicksByHero = s.abilityPicksByHero || {};
+  playerNames = s.playerNames;
+  firstPlayerIdx = s.firstPlayerIdx;
+  if (s.hostIsFirst !== undefined) hostIsFirst = s.hostIsFirst;
+  
+  lastAction = s.lastAction || null;
+  lastAbilityAction = s.lastAbilityAction || null;
+  justEnteredAbilityPhase = s.justEnteredAbilityPhase || false;
+  
+  if (lastAction && currentStep > prevStep) {
+    showHeroAnimation(lastAction.hero, lastAction.type);
+  }
+  
+  if (abilityPhase === "none") {
+    if (abilityTransitionTimer) { clearTimeout(abilityTransitionTimer); abilityTransitionTimer = null; }
+    const el = document.getElementById("ability-phase");
+    if (el) { el.style.transition = ""; el.style.opacity = ""; }
+  }
+  
+  render();
+}
+
+function generateLobbyCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+
+async function hostLobby() {
+  try {
+    const { joinRoom } = await import('https://cdn.skypack.dev/trystero');
+    const code = generateLobbyCode();
+    isHost = true;
+    myRole = 'host';
+    lobbyCode = code;
+    window.__leaderboardSent = false;
+    room = joinRoom(TRYSTERO_CONFIG, code);
+    setupTrysteroHandlers();
+    document.getElementById('lobby-preconnect').style.display = 'none';
+    document.getElementById('lobby-code-display').style.display = 'block';
+    document.getElementById('lobby-code-display').innerHTML =
+      `Код лобби: <strong>${code}</strong><br><small style="color:#8b7355">Отправьте этот код другу</small>`;
+    document.getElementById('lobby-status').textContent = 'Ожидание второго игрока…';
+    updateLobbyUI();
+  } catch (err) {
+    document.getElementById('lobby-status').textContent = 'Ошибка Trystero: ' + err.message;
+  }
+}
+
+async function joinLobby(code) {
+  try {
+    const { joinRoom } = await import('https://cdn.skypack.dev/trystero');
+    isHost = false;
+    myRole = 'guest';
+    lobbyCode = code.toUpperCase();
+    window.__leaderboardSent = false;
+    room = joinRoom(TRYSTERO_CONFIG, lobbyCode);
+    setupTrysteroHandlers();
+    document.getElementById('lobby-preconnect').style.display = 'none';
+    document.getElementById('lobby-status').textContent = 'Подключение к лобби ' + lobbyCode + '…';
+    updateLobbyUI();
+  } catch (err) {
+    document.getElementById('lobby-status').textContent = 'Ошибка Trystero: ' + err.message;
+  }
+}
+
+function joinLobbyFromInput() {
+  const code = document.getElementById('join-code').value.trim();
+  if (code) joinLobby(code);
+}
+
+function setupTrysteroHandlers() {
+  [sendMsg] = room.makeAction('msg');
+  const [, receiveMsg] = room.makeAction('msg');
+  receiveMsg((data, peerId) => {
+    if (data.type === 'name') {
+      remoteNetName = data.name;
+      remoteIsReady = true;
+      updateLobbyUI();
+    }
+
+if (data.type === 'ability_transition_start') {
+  if (abilityTransitionTimer) clearTimeout(abilityTransitionTimer);
+  abilityTransitionTimer = setTimeout(() => {
+    const el = document.getElementById("ability-phase");
+    if (el) {
+      el.style.transition = "opacity 0.2s ease-out";
+      el.style.opacity = "0";
+    }
+    abilityTransitionTimer = null;
+  }, 600);
+}
+
+if (data.type === 'ability_transition_end') {
+  const el = document.getElementById("ability-phase");
+  if (el) {
+    el.style.transition = "none";
+    el.style.opacity = "0";
+    void el.offsetWidth;
+    el.style.transition = "opacity 0.2s ease-in";
+    el.style.opacity = "1";
+  }
+}
+
+if (data.type === 'coin') {
+  hostIsFirst = data.hostIsFirst;
+  coinFlipped = true;
+  playerNames = data.hostIsFirst
+    ? [data.hostName, data.guestName]
+    : [data.guestName, data.hostName];
+  firstPlayerIdx = 0;
+  const coin = document.getElementById('net-coin');
+  const resultEl = document.getElementById('net-coin-result');
+  const coinDisplay = document.getElementById('net-coin-display');
+  coinDisplay.style.display = 'flex';
+
+  setCoinFace("net-coin-img", "heads");
+
+  coin.classList.remove('flipping');
+  void coin.offsetWidth;
+  coin.classList.add('flipping');
+
+  const flipInterval = setInterval(() => {
+    setCoinFace("net-coin-img", Math.random() < 0.5 ? "heads" : "tails");
+  }, 120);
+
+  setTimeout(() => {
+    clearInterval(flipInterval);
+    setCoinFace("net-coin-img", data.hostIsFirst ? "heads" : "tails");
+    const firstName = data.hostIsFirst ? data.hostName : data.guestName;
+    resultEl.innerHTML = `Первым ходит: <strong>${firstName}</strong>`;
+    resultEl.classList.remove("fade-in");
+    void resultEl.offsetWidth;
+    resultEl.classList.add("fade-in");
+    updateLobbyUI();
+  }, 1500);
+
+  updateLobbyUI();
+}
+
+// ====== СИНХРОНИЗАЦИЯ ЛИДЕРБОРДА ======
+if (data.type === 'leaderboard_sync') {
+  const localMatches = loadMatches();
+  const remoteMatches = data.payload;
+  const merged = mergeMatches(localMatches, remoteMatches);
+  saveMatches(merged);
+  recalculateLeaderboard(merged);
+  
+  remoteStats = loadLeaderboard(); // Исправлено: загружаем весь лидерборд
+  
+  if (document.getElementById('leaderboard-screen').style.display === 'block') {
+    renderLeaderboard();
+  }
+}
+
+    if (data.type === 'request_leaderboard' && isHost) {
+      if (sendMsg) {
+        sendMsg({ type: 'leaderboard_sync', payload: loadMatches() });
+      }
+    }
+
+    if (data.type === 'winner') {
+      winnerAlreadySelected = true;
+      announcedWinnerName = data.payload.winnerName;
+      render();
+    }
+
+    if (!isHost) {
+      if (data.type === 'state') applyState(data.payload);
+      if (data.type === 'start') startNetworkDraft(data.payload);
+    } else {
+      if (data.type === 'action') handleRemoteAction(data.payload);
+    }
+  });
+  room.onPeerJoin(peerId => {
+    isConnected = true;
+    document.getElementById('lobby-status').textContent = 'Соединение установлено!';
+    updateLobbyUI();
+  });
+  room.onPeerLeave(peerId => {
+    isConnected = false;
+    document.getElementById('lobby-status').textContent = 'Соединение потеряно.';
+    updateLobbyUI();
+  });
+}
+
+function submitName() {
+  if (!sendMsg) return;
+  const name = document.getElementById('net-name-input').value.trim();
+  myNetName = name || (isHost ? 'Игрок 1' : 'Игрок 2');
+  iAmReady = true;
+  sendMsg({ type: 'name', name: myNetName });
+  updateLobbyUI();
+}
+
+function updateLobbyUI() {
+  const nameInput = document.getElementById('lobby-name-input');
+  const namesStatus = document.getElementById('lobby-names-status');
+  const coinArea = document.getElementById('lobby-coin-area');
+  const flipBtn = document.getElementById('flip-net-btn');
+  const startBtn = document.getElementById('start-net-btn');
+  nameInput.style.display = (isConnected && !iAmReady) ? 'block' : 'none';
+
+let myRating = '—';
+  let remoteRating = '—';
+  const lb = loadLeaderboard();
+  if (iAmReady && lb[myNetName]) myRating = lb[myNetName].rating;
+  if (remoteIsReady && lb[remoteNetName]) remoteRating = lb[remoteNetName].rating;
+  if (remoteStats && remoteStats[remoteNetName]) remoteRating = remoteStats[remoteNetName].rating;
+
+  let status = '';
+  if (iAmReady) status += `Вы: <strong>${myNetName}</strong> (рейтинг: ${myRating})<br>`;
+  if (remoteIsReady) status += `Партнёр: <strong>${remoteNetName}</strong> (рейтинг: ${remoteRating})<br>`;
+
+  if (iAmReady && !remoteIsReady) status += 'Ожидание имени партнёра…';
+  else if (!iAmReady && remoteIsReady) status += 'Партнёр готов. Введите своё имя.';
+  namesStatus.innerHTML = status;
+
+  if (iAmReady && remoteIsReady && sendMsg && !window.__leaderboardSent) {
+    window.__leaderboardSent = true; 
+    sendMsg({ type: 'leaderboard_sync', payload: loadMatches() });
+  }
+
+  if (iAmReady && remoteIsReady && !coinFlipped) {
+    coinArea.style.display = 'block';
+    flipBtn.style.display = isHost ? 'inline-block' : 'none';
+    startBtn.style.display = 'none';
+  } else if (coinFlipped) {
+    coinArea.style.display = 'block';
+    flipBtn.style.display = 'none';
+    startBtn.style.display = isHost ? 'inline-block' : 'none';
+  } else {
+    coinArea.style.display = 'none';
+    startBtn.style.display = 'none';
+  }
+}
+
+function flipNetCoin() {
+  if (!isHost || !iAmReady || !remoteIsReady || coinFlipped) return;
+  hostIsFirst = Math.random() < 0.5;
+  const coin = document.getElementById("net-coin");
+  const resultEl = document.getElementById("net-coin-result");
+  const coinDisplay = document.getElementById("net-coin-display");
+  const flipBtn = document.getElementById("flip-net-btn");
+  flipBtn.disabled = true;
+  resultEl.textContent = '';
+  coinDisplay.style.display = 'flex';
+
+  setCoinFace("net-coin-img", "heads");
+
+  coin.classList.remove('flipping');
+  void coin.offsetWidth;
+  coin.classList.add('flipping');
+
+  const flipInterval = setInterval(() => {
+    setCoinFace("net-coin-img", Math.random() < 0.5 ? "heads" : "tails");
+  }, 120);
+
+  sendMsg({ type: 'coin', hostIsFirst, hostName: myNetName, guestName: remoteNetName });
+
+  setTimeout(() => {
+    clearInterval(flipInterval);
+    setCoinFace("net-coin-img", hostIsFirst ? "heads" : "tails");
+    const firstName = hostIsFirst ? myNetName : remoteNetName;
+    playerNames = hostIsFirst ? [myNetName, remoteNetName] : [remoteNetName, myNetName];
+    firstPlayerIdx = 0;
+    coinFlipped = true;
+    flipBtn.disabled = false;
+    resultEl.innerHTML = `Первым ходит: <strong>${firstName}</strong>`;
+    resultEl.classList.remove("fade-in");
+    void resultEl.offsetWidth;
+    resultEl.classList.add("fade-in");
+    updateLobbyUI();
+  }, 1500);
+}
+
+function startNetworkDraftAsHost() {
+  if (!isHost || !coinFlipped) return;
+  networkMode = true;
+  init();
+  if (sendMsg) {
+    sendMsg({ type: 'start', payload: { playerNames, firstPlayerIdx, hostIsFirst, gameMode } });
+    sendMsg({ type: 'state', payload: snapshotState() });
+  }
+  document.getElementById('lobby-screen').style.display = 'none';
+  document.getElementById('draft-screen').style.display = 'block';
+  document.querySelector('.site-header').style.display = "none";
+}
+
+function startNetworkDraft(payload) {
+  gameMode = payload.gameMode || 'normal';
+  winnerAlreadySelected = false;
+  announcedWinnerName = null;
+  networkMode = true;
+  playerNames = payload.playerNames;
+  firstPlayerIdx = payload.firstPlayerIdx;
+  if (payload.hostIsFirst !== undefined) hostIsFirst = payload.hostIsFirst;
+  init();
+  document.getElementById('lobby-screen').style.display = 'none';
+  document.getElementById('draft-screen').style.display = 'block';
+  document.querySelector('.site-header').style.display = "none";
+  if (isHost && sendMsg) {
+    sendMsg({ type: 'leaderboard_sync', payload: loadMatches() });
+  }
+}
+
+
+async function handleRemoteAction(action) {
+  if (!isHost) return;
+
+  if (action.kind === 'resetDraft') {
+    resetDraftInternal();
+    if (sendMsg) sendMsg({ type: 'state', payload: snapshotState() });
+    render();
+    return;
+  }
+
+  const guestPlayerNum = hostIsFirst ? 2 : 1;
+
+  if (action.kind === 'selectHero') {
+    const turn = getCurrentTurn();
+    if (!turn || turn.player !== guestPlayerNum) return;
+    selectHeroInternal(action.hero);
+    if (sendMsg) sendMsg({ type: 'state', payload: snapshotState() });
+    render();
+    return;
+  }
+
+  if (action.kind === 'abilityAction') {
+    const step = getCurrentAbilityStep();
+    if (!step || step.player !== guestPlayerNum) return;
+    await performAbilityAction(action.ability);
+    return;
+  }
+}
+
+// ====== ВНУТРЕННИЕ (без сети) ======
+function selectHeroInternal(hero) {
+  const turn = getCurrentTurn();
+  if (!turn || state[hero] !== "available") return;
+  if (turn.action === "ban") { state[hero] = "banned"; (turn.player === 1 ? p1Bans : p2Bans).push(hero); }
+  else { state[hero] = "picked-p" + turn.player; (turn.player === 1 ? p1Picks : p2Picks).push(hero); }
+  lastAction = { type: turn.action, player: turn.player, hero };
+  showHeroAnimation(hero, turn.action);
+  currentStep++;
+ if (currentStep >= DRAFT_ORDER.length && abilityPhase === "none") {
+    abilityPhase = "ability";
+    abilityStep = 0;
+    justEnteredAbilityPhase = true;
+  }
+}
+
+async function performAbilityAction(ability, animate = true) {
+  const step = getCurrentAbilityStep();
+  if (!step) return;
+  const targetHero = getAbilityTargetHero();
+  if (!targetHero) return;
+  
+  const banned = abilityBansByHero[targetHero] || [];
+  const picked = abilityPicksByHero[targetHero] || [];
+  if (banned.includes(ability) || picked.includes(ability)) return;
+  
+  const token = draftToken;
+  
+  // 1. Сначала обновляем ДАННЫЕ (без рендера)
+  if (step.action === "ban") {
+    if (!abilityBansByHero[targetHero]) abilityBansByHero[targetHero] = [];
+    abilityBansByHero[targetHero].push(ability);
+  } else {
+    if (!abilityPicksByHero[targetHero]) abilityPicksByHero[targetHero] = [];
+    abilityPicksByHero[targetHero].push(ability);
+  }
+  lastAbilityAction = { hero: targetHero, ability, action: step.action };
+  
+  // 2. Режим без анимации (случайный драфт)
+  if (!animate) {
+    abilityStep++;
+    if (abilityStep >= ABILITY_ORDER.length) abilityPhase = "done";
+    render();
+    if (networkMode && isHost && sendMsg) sendMsg({ type: 'state', payload: snapshotState() });
+    return;
+  }
+  
+  // 3. Рендерим СЕЙЧАС, чтобы кнопка мигнула (just-banned / just-picked)
+  render();
+  
+  if (networkMode && isHost && sendMsg) {
+    sendMsg({ type: 'state', payload: snapshotState() });
+    sendMsg({ type: 'ability_transition_start' });
+  }
+  
+  // 4. ЖДЁМ окончания анимации кнопки (600 мс)
+  await new Promise(r => setTimeout(r, 600));
+  if (token !== draftToken) return;
+  
+  // 5. Затухание панели
+  const el = document.getElementById("ability-phase");
+  if (el) {
+    el.style.transition = "opacity 0.2s ease-out";
+    el.style.opacity = "0";
+  }
+  
+  await new Promise(r => setTimeout(r, 200));
+  if (token !== draftToken) return;
+  
+  // 6. Шаг ВПЕРЁД + рендер нового героя (после затухания)
+  abilityStep++;
+  if (abilityStep >= ABILITY_ORDER.length) abilityPhase = "done";
+  render();
+  
+  // 7. Плавное появление
+  if (el && abilityPhase !== "done") {
+    el.style.transition = "none";
+    el.style.opacity = "0";
+    void el.offsetWidth;
+    el.style.transition = "opacity 0.2s ease-in";
+    el.style.opacity = "1";
+  }
+  
+  if (networkMode && isHost && sendMsg) {
+    sendMsg({ type: 'state', payload: snapshotState() });
+    sendMsg({ type: 'ability_transition_end' });
+  }
+}
+
+// ====== ВНЕШНИЕ ======
+function selectHero(hero) {
+  if (!networkMode) { selectHeroInternal(hero); render(); return; }
+  const turn = getCurrentTurn();
+  const myPlayerNum = isHost ? (hostIsFirst ? 1 : 2) : (hostIsFirst ? 2 : 1);
+  if (!turn || turn.player !== myPlayerNum) return;
+  if (!isHost) {
+    if (sendMsg) sendMsg({ type: 'action', payload: { kind: 'selectHero', hero } });
+    return;
+  }
+  selectHeroInternal(hero);
+  if (sendMsg) sendMsg({ type: 'state', payload: snapshotState() });
+  render();
+}
+
+async function selectAbility(ability) {
+  if (!networkMode) { await performAbilityAction(ability); return; }
+  const step = getCurrentAbilityStep();
+  if (!step) return;
+  const myPlayerNum = isHost ? (hostIsFirst ? 1 : 2) : (hostIsFirst ? 2 : 1);
+  if (step.player !== myPlayerNum) return;
+  if (!isHost) {
+    if (sendMsg) sendMsg({ type: 'action', payload: { kind: 'abilityAction', ability } });
+    return;
+  }
+  await performAbilityAction(ability);
+}
+
+function getCurrentAbilityStep() {
+  return abilityStep < ABILITY_ORDER.length ? ABILITY_ORDER[abilityStep] : null;
+}
+
+function getAbilityTargetHero() {
+  const step = getCurrentAbilityStep();
+  if (!step) return null;
+  const picks = step.owner === 1 ? p1Picks : p2Picks;
+  return picks[step.heroIdx] || null;
+}
+
+// ====== РЕЙТИНГОВАЯ СИСТЕМА ======
+let winnerAlreadySelected = false;
+let announcedWinnerName = null;
+const LEADERBOARD_KEY = 'dd_draft_leaderboard_v1';
+const MATCHES_KEY = 'dd_draft_matches_v1';
+
+// ====== ФУНКЦИЯ СЛУЧАЙНОГО ВЫБОРА ======
+
+let isRandomDraftRunning = false;
+
+async function fillRandomDraft() {
+  // 1. Случайные баны и пики героев
+  while (currentStep < DRAFT_ORDER.length) {
+    const available = HEROES.filter(h => state[h] === "available");
+    if (available.length === 0) break;
+    const hero = available[Math.floor(Math.random() * available.length)];
+    selectHeroInternal(hero);
+    render();
+
+    if (networkMode && isHost && sendMsg) {
+      sendMsg({ type: 'state', payload: snapshotState() });
+    }
+
+    await new Promise(r => setTimeout(r, 500));
+  }
+
+  // 2. Случайные баны способностей (С АНИМАЦИЯМИ)
+  let safety = 1000;
+  while (abilityPhase !== "done" && safety-- > 0) {
+    const step = getCurrentAbilityStep();
+    if (!step) break;
+    const targetHero = getAbilityTargetHero();
+    if (!targetHero) break;
+    
+    const banned = abilityBansByHero[targetHero] || [];
+    const picked = abilityPicksByHero[targetHero] || [];
+    const available = (ABILITIES[targetHero] || []).filter(a => !banned.includes(a) && !picked.includes(a));
+    
+    if (available.length === 0) break;
+    
+    const ability = available[Math.floor(Math.random() * available.length)];
+    await performAbilityAction(ability, true);
+    await new Promise(r => setTimeout(r, 200));
+  }
+}
+
+async function randomDraft() {
+  if (abilityPhase === "done" || isRandomDraftRunning) return;
+
+  if (!networkMode) {
+    isRandomDraftRunning = true;
+    await fillRandomDraft();
+    isRandomDraftRunning = false;
+    return;
+  }
+
+  if (!isHost) return;
+
+  isRandomDraftRunning = true;
+  await fillRandomDraft();
+  isRandomDraftRunning = false;
+}
+
+// ====== ФУНКЦИЯ СБРОСА ДРАФТА ======
+
+function resetDraft() {
+  if (!confirm("Сбросить драфт и начать заново? Имена и результат монетки сохранятся.")) return;
+
+  if (!networkMode) {
+    init();
+    return;
+  }
+
+  if (isHost) {
+    resetDraftInternal();
+    if (sendMsg) sendMsg({ type: 'state', payload: snapshotState() });
+    render();
+  } else {
+    if (sendMsg) sendMsg({ type: 'action', payload: { kind: 'resetDraft' } });
+  }
+}
+
+function resetDraftInternal() {
+  draftToken++;
+  const el = document.getElementById("ability-phase");
+  if (el) { el.style.transition = ""; el.style.opacity = ""; }
+  const draftScreenEl = document.getElementById("draft-screen");
+  if (draftScreenEl) draftScreenEl.classList.remove("draft-completed");
+  lastPhaseSignature = null;
+  state = {}; HEROES.forEach(h => state[h] = "available");
+  currentStep = 0; p1Bans = []; p1Picks = []; p2Bans = []; p2Picks = [];
+  abilityPhase = "none";
+  abilityStep = 0;
+  abilityBansByHero = {};
+  abilityPicksByHero = {};
+  lastAction = null; lastAbilityAction = null; justEnteredAbilityPhase = false;
+  winnerAlreadySelected = false;
+  announcedWinnerName = null;
+  hideHeroAnimation();
+  hideHeroTooltip();
+}
+
+function render() {
+  hideHeroTooltip();
+  
+  const lb = loadLeaderboard();
+  const name1 = displayName(1);
+  const name2 = displayName(2);
+  const rating1 = (lb[name1] ? lb[name1].rating : '—');
+  const rating2 = (lb[name2] ? lb[name2].rating : '—');
+  
+  document.getElementById("bans-p1-name").textContent = name1 + ' (' + rating1 + ')';
+  document.getElementById("bans-p2-name").textContent = name2 + ' (' + rating2 + ')';
+  document.getElementById("picks-p1-name").textContent = name1 + ' (' + rating1 + ')';
+  document.getElementById("picks-p2-name").textContent = name2 + ' (' + rating2 + ')';
+  document.getElementById("abilities-p1-name").textContent = name1 + ' (' + rating1 + ')';
+  document.getElementById("abilities-p2-name").textContent = name2 + ' (' + rating2 + ')';
+
+  const isHeroDraft = (abilityPhase === "none");
+  const isAbilityPhase = (abilityPhase === "ability");
+  const isDone = (abilityPhase === "done");
+
+const draftScreenEl = document.getElementById("draft-screen");
+  if (draftScreenEl) {
+    if (isDone) {
+      draftScreenEl.classList.add("draft-completed");
+    } else {
+      draftScreenEl.classList.remove("draft-completed");
+    }
+  }
+
+  const heroesContainer = document.getElementById("heroes");
+  if (heroesContainer) heroesContainer.style.display = isHeroDraft ? "flex" : "none";
+
+  const statusContainer = document.getElementById("status");
+  if (statusContainer) statusContainer.style.display = isHeroDraft ? "block" : "none";
+
+  const bansBlock = document.querySelector(".unified-bans-block");
+  if (bansBlock) bansBlock.style.display = isHeroDraft ? "block" : "none";
+
+  const picksBlock = document.querySelector(".unified-picks-block");
+  if (picksBlock) picksBlock.style.display = (isHeroDraft || isDone) ? "block" : "none";
+
+  const abilitiesBlock = document.querySelector(".unified-abilities-block");
+  if (abilitiesBlock) abilitiesBlock.style.display = (isAbilityPhase || isDone) ? "block" : "none";
+
+  const abilityPhaseContainer = document.getElementById("ability-phase");
+  if (abilityPhaseContainer) {
+    abilityPhaseContainer.style.display = isDone ? "none" : "";  
+    if (isDone || abilityPhase === "none") {
+      abilityPhaseContainer.style.transition = "";
+      abilityPhaseContainer.style.opacity = "";
+    }
+  }
+  
+  const statusEl = document.getElementById("status");
+  const turn = getCurrentTurn();
+  if (abilityPhase === "done") { statusEl.textContent = "Драфт полностью завершён!"; statusEl.className = "status done changed"; }
+  else if (abilityPhase !== "none") { statusEl.textContent = "Фаза бана способностей"; statusEl.className = "status done changed"; }
+  else if (!turn) { statusEl.textContent = "Драфт завершён!"; statusEl.className = "status done changed"; }
+  else { const actionRu = turn.action === "ban" ? "БАН" : "ПИК"; statusEl.textContent = `Ход: ${displayName(turn.player)} — ${actionRu}`; statusEl.className = "status p" + turn.player + " changed"; }
+
+const randomBtn = document.getElementById("random-draft-btn");
+if (randomBtn) {
+  const noAccess = networkMode && !isHost;
+  const isDone = abilityPhase === "done";
+  randomBtn.disabled = noAccess || isDone;
+  randomBtn.title = isDone
+    ? "Драфт уже завершён"
+    : (noAccess ? "Доступно только хосту" : "Случайно выбрать героев и способности");
+}
+
+  const heroesEl = document.getElementById("heroes");
+  heroesEl.innerHTML = "";
+  HEROES.forEach(hero => {
+    const div = document.createElement("div");
+    div.className = "hero " + state[hero];
+    div.appendChild(makeIcon(HERO_ICONS[hero], hero, "hero-icon"));
+    attachHeroTooltip(div, hero);
+    let canClick;
+    if (networkMode) {
+      const myPlayerNum = isHost ? (hostIsFirst ? 1 : 2) : (hostIsFirst ? 2 : 1);
+      canClick = state[hero] === "available" && turn && turn.player === myPlayerNum;
+    } else {
+      canClick = state[hero] === "available" && turn;
+    }
+    if (canClick) { div.onclick = () => selectHero(hero); }
+    else { div.classList.add("disabled"); }
+    if (lastAction && lastAction.hero === hero) {
+      div.classList.add(lastAction.type === "ban" ? "just-banned" : "just-picked-p" + lastAction.player);
+    }
+    heroesEl.appendChild(div);
+  });
+
+  renderBansRow("p1-bans", p1Bans);
+  renderBansRow("p2-bans", p2Bans);
+  
+  renderPicksRow("p1-picks", p1Picks);
+  renderPicksRow("p2-picks", p2Picks);
+  renderAbilityBansRow("p1-ability-bans", p1Picks);
+  renderAbilityBansRow("p2-ability-bans", p2Picks);
+
+    const abilityEl = document.getElementById("ability-phase");
+  if (abilityPhase === "none" || abilityPhase === "done") { 
+    abilityEl.classList.remove("active", "p1", "p2", "just-activated"); 
+    abilityEl.innerHTML = ""; 
+  } else {
+    abilityEl.classList.add("active");
+    if (justEnteredAbilityPhase) { abilityEl.classList.add("just-activated"); justEnteredAbilityPhase = false; }
+    renderAbilityPhase();
+  }
+  setTimeout(() => { lastAction = null; lastAbilityAction = null; }, 850);
+  renderWinnerSelection();
+  checkPhaseChange();
+}
+
+function renderBansRow(id, bans) {
+  const el = document.getElementById(id);
+  el.innerHTML = "";
+  if (bans.length === 0) { el.innerHTML = ''; return; }
+  bans.forEach(hero => {
+    const cell = document.createElement("div");
+    cell.className = "hero-cell";
+
+    if (lastAction && lastAction.hero === hero && lastAction.type === "ban") {
+      cell.classList.add("just-added");
+    }
+
+    const gifUrl = BAN_GIFS[hero];
+    if (gifUrl) {
+      const gif = document.createElement("img");
+      gif.className = "hero-gif"; gif.alt = ""; gif.src = gifUrl; gif.loading = "lazy";
+      gif.onerror = () => gif.style.display = "none";
+      cell.appendChild(gif);
+    }
+    el.appendChild(cell);
+  });
+}
+
+function renderPicksRow(id, picks) {
+  const el = document.getElementById(id);
+  el.innerHTML = "";
+  if (picks.length === 0) { el.innerHTML = ''; return; }
+  picks.forEach(hero => {
+    const cell = document.createElement("div");
+    cell.className = "hero-cell";
+
+    if (lastAction && lastAction.hero === hero && lastAction.type === "pick") {
+      cell.classList.add("just-added");
+    }
+
+    const gifUrl = PICK_GIFS[hero];
+    if (gifUrl) {
+      const gif = document.createElement("img");
+      gif.className = "hero-gif"; gif.alt = ""; gif.src = gifUrl; gif.loading = "lazy";
+      gif.onerror = () => gif.style.display = "none";
+      cell.appendChild(gif);
+    }
+
+    attachHeroTooltip(cell, hero);
+
+    el.appendChild(cell);
+  });
+}
+
+function renderAbilityBansRow(id, picks) {
+  const el = document.getElementById(id);
+  el.innerHTML = "";
+  
+  const hasAny = picks.some(h => 
+    (abilityBansByHero[h] || []).length > 0 || 
+    (abilityPicksByHero[h] || []).length > 0
+  );
+  if (!hasAny) return;
+  
+  picks.forEach(hero => {
+    const bans = abilityBansByHero[hero] || [];
+    const picksArr = abilityPicksByHero[hero] || [];
+    if (bans.length === 0 && picksArr.length === 0) return;
+    
+    const cell = document.createElement("div");
+    cell.className = "hero-cell";
+    
+const isFirstBanForHero = lastAbilityAction && lastAbilityAction.hero === hero && lastAbilityAction.action === "ban" && bans.length === 1;
+    if (isFirstBanForHero) cell.classList.add("just-added");    
+    cell.appendChild(makeIcon(HERO_ICONS[hero], hero, "hero-icon"));
+    
+    const container = document.createElement("div");
+    container.className = "hero-abilities-container";
+    
+    // Ряд 1: Забаненные (красные)
+    const banRow = document.createElement("div");
+    banRow.className = "hero-ability-row banned-row";
+    bans.forEach(a => {
+      const tag = document.createElement("div");
+      tag.className = "hero-ban-tag";
+      if (lastAbilityAction && lastAbilityAction.hero === hero && lastAbilityAction.action === "ban" && lastAbilityAction.ability === a) {
+        tag.classList.add("just-added");
+      }
+      const src = getAbilityIcon(hero, a);
+      if (src) {
+        const banIcon = document.createElement("img");
+        banIcon.className = "ban-ability-icon"; banIcon.alt = ""; banIcon.loading = "lazy";
+        banIcon.src = src; banIcon.onerror = () => banIcon.style.display = "none";
+        tag.appendChild(banIcon);
+      }
+      const span = document.createElement("span");
+      span.textContent = abilityNameRu(hero, a);
+      tag.appendChild(span);
+      const tooltipHtml = buildAbilityTooltipHtml(hero, a);
+      if (tooltipHtml) {
+        const tip = document.createElement("div");
+        tip.className = "ability-tooltip";
+        tip.innerHTML = tooltipHtml;
+        tag.appendChild(tip);
+      }
+      banRow.appendChild(tag);
+    });
+    container.appendChild(banRow);
+    
+    // Ряд 2: Выбранные (зелёные)
+    const pickRow = document.createElement("div");
+    pickRow.className = "hero-ability-row picked-row";
+    picksArr.forEach(a => {
+      const tag = document.createElement("div");
+      tag.className = "hero-ban-tag picked-tag";
+      if (lastAbilityAction && lastAbilityAction.hero === hero && lastAbilityAction.action === "pick" && lastAbilityAction.ability === a) {
+        tag.classList.add("just-added");
+      }
+      const src = getAbilityIcon(hero, a);
+      if (src) {
+        const banIcon = document.createElement("img");
+        banIcon.className = "ban-ability-icon"; banIcon.alt = ""; banIcon.loading = "lazy";
+        banIcon.src = src; banIcon.onerror = () => banIcon.style.display = "none";
+        tag.appendChild(banIcon);
+      }
+      const span = document.createElement("span");
+      span.textContent = abilityNameRu(hero, a);
+      tag.appendChild(span);
+      const tooltipHtml = buildAbilityTooltipHtml(hero, a);
+      if (tooltipHtml) {
+        const tip = document.createElement("div");
+        tip.className = "ability-tooltip";
+        tip.innerHTML = tooltipHtml;
+        tag.appendChild(tip);
+      }
+      pickRow.appendChild(tag);
+    });
+    container.appendChild(pickRow);
+    
+    cell.appendChild(container);
+    el.appendChild(cell);
+  });
+}
+
+function renderAbilityPhase() {
+  const el = document.getElementById("ability-phase");
+  const step = getCurrentAbilityStep();
+  if (!step) {
+    el.innerHTML = `<h2>Драфт полностью завершён!</h2><p>Все способности забанены и выбраны.</p>`;
+    return;
+  }
+  
+  const targetHero = getAbilityTargetHero();
+  if (!targetHero) {
+    el.innerHTML = `<p>Фаза драфта способностей завершена.</p>`;
+    return;
+  }
+  
+  const actorNum = step.player;
+  const actorName = displayName(actorNum);
+  const heroName = HERO_NAMES_RU[targetHero] || targetHero;
+  const isBan = step.action === "ban";
+  
+  el.classList.remove("p1", "p2");
+  el.classList.add("p" + actorNum);
+  
+  el.innerHTML = "";
+  
+  const h2 = document.createElement("h2");
+  h2.textContent = isBan ? "Фаза бана способностей" : "Фаза выбора способностей";
+  el.appendChild(h2);
+  
+  const status = document.createElement("div");
+  status.className = "ability-status p" + actorNum;
+  const targetDesc = isBan
+    ? `вражеского героя <strong>${heroName}</strong>`
+    : `своего героя <strong>${heroName}</strong>`;
+  status.innerHTML = `${actorName} ${isBan ? "банит" : "выбирает"} способность ${targetDesc}`;
+  el.appendChild(status);
+  
+  const targetRow = document.createElement("div");
+  targetRow.className = "ability-target";
+  targetRow.appendChild(makeIcon(HERO_ICONS[targetHero], targetHero, "hero-icon"));
+  const targetName = document.createElement("strong");
+  targetName.textContent = heroName;
+  targetRow.appendChild(targetName);
+  el.appendChild(targetRow);
+  
+  const abilitiesBox = document.createElement("div");
+  abilitiesBox.className = "abilities";
+  
+  const abilities = ABILITIES[targetHero] || [];
+  const banned = abilityBansByHero[targetHero] || [];
+  const picked = abilityPicksByHero[targetHero] || [];
+  
+  const myPlayerNum = networkMode ? (isHost ? (hostIsFirst ? 1 : 2) : (hostIsFirst ? 2 : 1)) : actorNum;
+  const myTurn = !networkMode || myPlayerNum === actorNum;
+  
+  abilities.forEach(ability => {
+    const isBanned = banned.includes(ability);
+    const isPicked = picked.includes(ability);
+    const unavailable = isBanned || isPicked;
+    
+    let disabled = unavailable || !myTurn;
+    
+    const btn = document.createElement("button");
+    let btnClass = "ability";
+    if (isBanned) btnClass += " banned";
+    if (isPicked) btnClass += " picked";
+    btn.className = btnClass;
+    btn.disabled = disabled;
+    
+    btn.appendChild(makeIcon(getAbilityIcon(targetHero, ability), ability, "ability-icon"));
+    const span = document.createElement("span");
+    let suffix = "";
+    if (isBanned) suffix = " ✕";
+    if (isPicked) suffix = " ✓";
+    span.textContent = abilityNameRu(targetHero, ability) + suffix;
+    btn.appendChild(span);
+    
+    if (lastAbilityAction && lastAbilityAction.hero === targetHero && lastAbilityAction.ability === ability) {
+      if (lastAbilityAction.action === "ban") btn.classList.add("just-banned");
+      else btn.classList.add("just-picked");
+    }
+    
+    const tooltipHtml = buildAbilityTooltipHtml(targetHero, ability);
+    if (tooltipHtml) {
+      const tip = document.createElement("div");
+      tip.className = "ability-tooltip";
+      tip.innerHTML = tooltipHtml;
+      btn.appendChild(tip);
+      btn.addEventListener("mouseenter", function() {
+        const tooltip = this.querySelector(".ability-tooltip");
+        if (!tooltip) return;
+        tooltip.style.bottom = "";
+        tooltip.style.top = "";
+        requestAnimationFrame(() => {
+          const rect = tooltip.getBoundingClientRect();
+          if (rect.top < 10) {
+            tooltip.style.bottom = "auto";
+            tooltip.style.top = "calc(100% + 6px)";
+          }
+        });
+      });
+    }
+    
+    if (!disabled) btn.addEventListener("click", () => selectAbility(ability));
+    abilitiesBox.appendChild(btn);
+  });
+  
+  el.appendChild(abilitiesBox);
+}
+
+// ====== РЕЙТИНГОВАЯ СИСТЕМА ======
+function loadLeaderboard() {
+  try {
+    return JSON.parse(localStorage.getItem(LEADERBOARD_KEY) || '{}');
+  } catch { return {}; }
+}
+
+function saveLeaderboard(db) {
+  localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(db));
+}
+
+function recordMatch(winnerName, loserName) {
+  addMatch(winnerName, loserName);
+}
+
+function loadMatches() {
+  try {
+    return JSON.parse(localStorage.getItem(MATCHES_KEY) || '[]');
+  } catch { return []; }
+}
+
+function saveMatches(matches) {
+  localStorage.setItem(MATCHES_KEY, JSON.stringify(matches));
+}
+
+function addMatch(winner, loser) {
+  if (winner === loser) return;
+  const matches = loadMatches();
+  matches.push({ winner, loser, timestamp: Date.now() });
+  saveMatches(matches);
+  recalculateLeaderboard(matches);
+}
+
+function recalculateLeaderboard(matches) {
+  const ratings = {};
+  
+  for (const match of matches) {
+    const w = match.winner;
+    const l = match.loser;
+    
+    if (!ratings[w]) ratings[w] = { wins: 0, losses: 0, rating: 1000 };
+    if (!ratings[l]) ratings[l] = { wins: 0, losses: 0, rating: 1000 };
+    
+    const expectedWinner = 1 / (1 + Math.pow(10, (ratings[l].rating - ratings[w].rating) / 400));
+    const K = 32;
+    const change = Math.round(K * (1 - expectedWinner));
+    
+    ratings[w].wins++;
+    ratings[w].rating += change;
+    ratings[l].losses++;
+    ratings[l].rating -= change;
+  }
+  
+  saveLeaderboard(ratings);
+}
+
+function mergeMatches(localMatches, remoteMatches) {
+  const existing = new Set();
+  const all = [];
+  
+  for (const m of remoteMatches) {
+    const key = m.winner + '|' + m.loser + '|' + m.timestamp;
+    if (!existing.has(key)) {
+      existing.add(key);
+      all.push(m);
+    }
+  }
+  
+  for (const m of localMatches) {
+    const key = m.winner + '|' + m.loser + '|' + m.timestamp;
+    if (!existing.has(key)) {
+      existing.add(key);
+      all.push(m);
+    }
+  }
+  
+  all.sort((a, b) => a.timestamp - b.timestamp);
+  return all;
+}
+
+function showLeaderboard() {
+  document.getElementById("start-screen").style.display = "none";
+  document.getElementById("lobby-screen").style.display = "none";
+  document.getElementById("setup-screen").style.display = "none";
+  document.getElementById("draft-screen").style.display = "none";
+  document.getElementById("leaderboard-screen").style.display = "block";
+  document.querySelector('.site-header').style.display = "block";
+  renderLeaderboard();
+}
+
+function backFromLeaderboard() {
+  document.getElementById("leaderboard-screen").style.display = "none";
+  document.getElementById("start-screen").style.display = "block";
+}
+
+function renderLeaderboard() {
+  const db = loadLeaderboard();
+  const el = document.getElementById('leaderboard-content');
+  const entries = Object.entries(db).sort((a, b) => b[1].rating - a[1].rating);
+
+  if (!isHost && sendMsg) {
+    sendMsg({ type: 'request_leaderboard' });
+  } 
+  if (!isHost && sendMsg) {
+    sendMsg({ type: 'leaderboard_sync', payload: loadMatches() });
+  }
+ 
+  if (entries.length === 0) {
+    el.innerHTML = '<p style="color:#8b7355; font-style:italic; text-align:center;">Пока нет записей. Сыграйте сетевой драфт и объявите победителя, чтобы появиться в таблице!</p>';
+    return;
+  }
+  
+  let html = '<table class="leaderboard-table"><thead><tr>' +
+    '<th>#</th><th>Игрок</th><th>Рейтинг</th><th>Победы</th><th>Поражения</th><th>% побед</th>' +
+    '</tr></thead><tbody>';
+  entries.forEach(([name, stats], idx) => {
+    const total = stats.wins + stats.losses;
+    const winRate = total > 0 ? Math.round((stats.wins / total) * 100) : 0;
+    html += `<tr>
+      <td>${idx + 1}</td>
+      <td><strong>${name}</strong></td>
+      <td>${stats.rating}</td>
+      <td style="color:#2ecc71;">${stats.wins}</td>
+      <td style="color:#e74c3c;">${stats.losses}</td>
+      <td>${winRate}%</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+function renderWinnerSelection() {
+  const el = document.getElementById('winner-selection');
+  if (!el) return;
+
+  const isDone = abilityPhase === "done";
+  const shouldShow = isDone && networkMode && gameMode === 'ranked';
+
+  if (!shouldShow) {
+    el.style.display = "none";
+    return;
+  }
+
+  el.style.display = "block";
+
+  if (winnerAlreadySelected) {
+    el.innerHTML = `<h2>🏆 Победитель: ${announcedWinnerName}</h2>`;
+    return;
+  }
+
+  if (isHost) {
+    el.innerHTML = `
+      <h2>Выберите победителя</h2>
+      <p style="color:#8b7355;">Результат будет записан в таблицу лидеров.</p>
+      <div class="winner-btn-group">
+        <button class="main-btn" onclick="selectWinner(1)">${displayName(1)} победил</button>
+        <button class="main-btn" onclick="selectWinner(2)">${displayName(2)} победил</button>
+      </div>
+    `;
+  } else {
+    el.innerHTML = `<h2>Ожидание выбора победителя хостом…</h2>`;
+  }
+}
+
+function selectWinner(draftPlayer) {
+  if (!isHost || !networkMode || winnerAlreadySelected) return;
+  
+  const winner = displayName(draftPlayer);
+  const loser = displayName(draftPlayer === 1 ? 2 : 1);
+  
+  if (!confirm(`Записать "${winner}" как победителя?`)) return;
+
+  recordMatch(winner, loser);
+  winnerAlreadySelected = true;
+  announcedWinnerName = winner;
+
+if (sendMsg) {
+    sendMsg({ type: 'winner', payload: { winnerName: winner } });
+    sendMsg({ type: 'leaderboard_sync', payload: loadMatches() });
+}
+
+  render();
+}
+
+</script>
+</body>
+</html>
